@@ -17,9 +17,9 @@
   <h2 class="text-3xl font-bold mb-6">My Transit Cards</h2>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
     {#each data.transit_cards as card}
-      <a href={`/card/${card.id}`} class="card bg-base-100 shadow-xl hover:shadow-2xl">
+      <a href={`/card/${card.id}`} class="card bg-base-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
         <figure>
-          <img src="https://cms.alexwang.net/assets/{card.image}" alt={card.name} class="w-full aspect-[3.375/2.125] object-cover" />
+          <img src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400" alt={card.name} class="w-full aspect-[3.375/2.125] object-cover" loading="lazy" />
         </figure>
         <div class="card-body">
           <h3 class="card-title">{card.name}</h3>
