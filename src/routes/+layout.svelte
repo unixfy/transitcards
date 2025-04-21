@@ -6,6 +6,8 @@
     let { children } = $props();
 </script>
 
+<title>Alex's Transit Cards</title>
+
 <div class="navbar bg-base-100 shadow-md">
     <div class="flex-1">
         <a href="/" class="btn btn-ghost text-xl">Alex's Transit Cards</a>
