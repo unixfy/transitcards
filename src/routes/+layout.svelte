@@ -13,7 +13,7 @@
     <div class="flex-none">
         <ul class="menu menu-horizontal px-1">
             <li><a href="/">Home</a></li>
-            <li><a href="/signin">Sign In</a></li>
+            <li><a href="https://cms.alexwang.net/auth/login/keycloak?redirect=https%3A%2F%2Fcms.alexwang.net%2Fadmin%2Flogin%3Fcontinue%3D">Sign In</a></li>
         </ul>
     </div>
 </div>
