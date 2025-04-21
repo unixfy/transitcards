@@ -4,10 +4,10 @@
 
 <div class="hero bg-base-200 py-10">
   <div class="hero-content text-center">
-    <div class="max-w-lg">
-      <h1 class="text-5xl font-bold">Welcome to Transit Card Manager</h1>
+    <div class="max-w-4xl">
+      <h1 class="text-5xl font-bold">Welcome to Alex's Transit Cards</h1>
       <p class="py-6">
-        Keep track of all your transit cards in one place. Click on a card to view more details.
+        A listing of all the transit cards in my collection. Click on a card to view more details.
       </p>
     </div>
   </div>
