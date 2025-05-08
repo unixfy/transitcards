@@ -16,7 +16,7 @@ export async function load({ fetch, params }) {
     }
 
     const response = await directus.request(
-        readItems('transit_cards', { filter: { id: { "_eq": params.uuid } } })
+        readItems('transit_cards', { filter: { id: { "_eq": params.uuid } }, fields: ['id', 'name', 'date_acquired', 'image', 'issuing_agency.name', 'issuing_agency.city', 'notes'] })
     );
 
     // Handle cases based on the response

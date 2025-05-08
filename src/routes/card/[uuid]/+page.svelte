@@ -23,8 +23,8 @@
           <h1 class="card-title text-4xl mb-4">{data.transit_card.name}</h1>
 
           <div class="space-y-2 mb-4">
-              <p><strong>Issuing Agency:</strong> {data.transit_card.issuing_agency}</p>
-              <p><strong>City:</strong> {data.transit_card.city}</p>
+              <p><strong>Issuing Agency:</strong> {data.transit_card.issuing_agency.name}</p>
+              <p><strong>City:</strong> {data.transit_card.issuing_agency.city}</p>
               {#if data.transit_card.date_acquired}
                   <p><strong>Acquired on:</strong> {formatDate(data.transit_card.date_acquired)}</p>
               {/if}

@@ -23,7 +23,7 @@
         </figure>
         <div class="card-body">
           <h3 class="card-title">{card.name}</h3>
-            <p>{card.issuing_agency} - {card.city}</p>
+            <p>{card.issuing_agency.name} - {card.issuing_agency.city}</p>
         </div>
       </a>
     {/each}
