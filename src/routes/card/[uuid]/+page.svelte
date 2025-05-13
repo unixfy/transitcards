@@ -10,8 +10,8 @@
 </script>
 
 <div class="container mx-auto px-4 py-10">
-  <div class="card lg:card-side bg-base-100 shadow-xl">
-      <figure class="w-full aspect-[3.375/2.125]">
+  <div class="card lg:card-side bg-base-100 shadow-xl mx-auto">
+      <figure class="w-full max-w-1/2 aspect-[3.375/2.125] bg-base-200 flex-shrink-0">
           <img
               src="https://cms.alexwang.net/assets/{data.transit_card.image}?format=webp&width=600"
               alt={data.transit_card.name}
@@ -38,7 +38,7 @@
           {/if}
 
           <div class="card-actions justify-start">
-              <button type="button" class="btn btn-primary btn-lg" on:click={history.back()}>Back to Cards</button>
+              <button type="button" class="btn btn-primary btn-lg" on:click={() => history.back()}>Back to Cards</button>
           </div>
       </div>
   </div>
