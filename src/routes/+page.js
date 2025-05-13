@@ -11,13 +11,11 @@ export async function load({ fetch, url }) {
         currentPage = 1;
     }
 
-    const offset = (currentPage - 1) * limit;
-
     // Fetch transit cards for the current page
     const transitCardsPromise = directus.request(
         readItems('transit_cards', {
             limit: limit,
-            offset: offset,
+            page: currentPage,
             sort: ['-binder_page_number', 'date_acquired', 'name'],
             fields: ['id', 'name', 'date_acquired', 'image', 'issuing_agency.name', 'issuing_agency.city', 'notes']
         })
