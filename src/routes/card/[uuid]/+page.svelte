@@ -38,7 +38,7 @@
           {/if}
 
           <div class="card-actions justify-start">
-              <a href="/" class="btn btn-primary btn-lg">Back to Cards</a>
+              <button type="button" class="btn btn-primary btn-lg" on:click={history.back()}>Back to Cards</button>
           </div>
       </div>
   </div>
