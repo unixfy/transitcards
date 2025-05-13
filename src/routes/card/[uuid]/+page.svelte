@@ -11,7 +11,7 @@
 
 <div class="container mx-auto px-4 py-10">
   <div class="card lg:card-side bg-base-100 shadow-xl">
-      <figure class="lg:w-1/3">
+      <figure class="w-full aspect-[3.375/2.125]">
           <img
               src="https://cms.alexwang.net/assets/{data.transit_card.image}?format=webp&width=600"
               alt={data.transit_card.name}
@@ -19,7 +19,7 @@
               loading="lazy"
           />
       </figure>
-      <div class="card-body lg:w-2/3">
+      <div class="card-body">
           <h1 class="card-title text-4xl mb-4">{data.transit_card.name}</h1>
 
           <div class="space-y-2 mb-4">
