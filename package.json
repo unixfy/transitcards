@@ -15,6 +15,7 @@
 		"@directus/sdk": "^19.1.0",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
+		"@fontsource/ibm-plex-mono": "^5.2.5",
 		"@fontsource/ibm-plex-sans": "^5.2.5",
 		"@fontsource/space-grotesk": "^5.2.7",
 		"@sveltejs/adapter-cloudflare": "^7.0.0",
