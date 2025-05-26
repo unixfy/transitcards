@@ -1,12 +1,20 @@
 <script>
     import '../app.css';
-    import { fade } from 'svelte/transition'; // Import the fade transition
-    import { page } from '$app/stores'; // Import the page store
+    import { fade } from 'svelte/transition';
+    import { page } from '$app/stores';
 
     let { children } = $props();
 </script>
 
-<title>Alex's Transit Cards</title>
+<svelte:head>
+    {#if $page.data.title}
+        <title>{$page.data.title} | Alex's Transit Cards</title>
+    {:else}
+        <title>Alex's Transit Cards</title>
+    {/if}
+    <title>Alex's Transit Cards</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+</svelte:head>
 
 <div class="navbar bg-base-100 shadow-md">
     <div class="flex-1">
