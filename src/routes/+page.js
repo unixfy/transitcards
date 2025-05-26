@@ -38,6 +38,7 @@ export async function load({ fetch, url }) {
         transit_cards: transit_cards,
         currentPage: currentPage,
         totalPages: totalPages,
-        totalCount: totalCount
+        totalCount: totalCount,
+        title: "Home"
     };
 }

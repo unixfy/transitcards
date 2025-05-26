@@ -30,6 +30,7 @@ export async function load({ fetch, params }) {
         // Exactly one result, return the item
         return {
             transit_card: response[0],
+            title: response[0].name || 'Transit Card Details'
         };
     }
 }
