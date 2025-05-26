@@ -20,7 +20,7 @@
           />
       </figure>
       <div class="card-body">
-          <h1 class="card-title text-4xl mb-4">{data.transit_card.name}</h1>
+          <h1 class="card-title text-4xl mb-4 font-display">{data.transit_card.name}</h1>
 
           <div class="space-y-2 mb-4">
               <p><strong>Issuing Agency:</strong> {data.transit_card.issuing_agency.name}</p>
