@@ -74,7 +74,7 @@
 </div>
 
 <div class="container mx-auto px-4 py-10">
-	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 		{#each data.transit_cards as card (card.id)}
 			<a
 				href={`/card/${card.id}`}
@@ -86,7 +86,7 @@
 				<div
 					class="bg-neutral-content/5 text-neutral-content/70 border-neutral-content/20 flex items-center justify-between border-b px-4 py-2 font-mono text-xs"
 				>
-					<span>CARD #{card.id}</span>
+					<span>CARD #{card.id.slice(-8)}</span>
 				</div>
 
 				<div class="space-y-4 p-4">
@@ -127,28 +127,28 @@
 		<div class="join mt-8 flex justify-center">
 			<!-- Previous Button -->
 			{#if data.currentPage > 1}
-				<a href="?page={data.currentPage - 1}" class="join-item btn btn-xl">« Prev</a>
+				<a href="?page={data.currentPage - 1}" class="join-item btn lg:btn-xl">« Prev</a>
 			{:else}
-				<button class="join-item btn btn-disabled btn-xl">« Prev</button>
+				<button class="join-item btn btn-disabled lg:btn-xl">« Prev</button>
 			{/if}
 
 			<!-- Page Number Buttons -->
 			{#each Array(data.totalPages) as _, i}
 				{@const pageNum = i + 1}
 				{#if pageNum === data.currentPage}
-					<button class="join-item btn btn-xl btn-active">{pageNum}</button>
+					<button class="join-item btn lg:btn-xl btn-active">{pageNum}</button>
 				{:else if pageNum === 1 || pageNum === data.totalPages || (pageNum >= data.currentPage - 2 && pageNum <= data.currentPage + 2)}
-					<a href="?page={pageNum}" class="join-item btn btn-xl">{pageNum}</a>
+					<a href="?page={pageNum}" class="join-item btn lg:btn-xl">{pageNum}</a>
 				{:else if (pageNum === data.currentPage - 3 && pageNum > 1 && data.currentPage - 3 !== 1) || (pageNum === data.currentPage + 3 && pageNum < data.totalPages && data.currentPage + 3 !== data.totalPages)}
-					<button class="join-item btn btn-xl btn-disabled">...</button>
+					<button class="join-item btn lg:btn-xl btn-disabled">...</button>
 				{/if}
 			{/each}
 
 			<!-- Next Button -->
 			{#if data.currentPage < data.totalPages}
-				<a href="?page={data.currentPage + 1}" class="join-item btn btn-xl">Next »</a>
+				<a href="?page={data.currentPage + 1}" class="join-item btn lg:btn-xl">Next »</a>
 			{:else}
-				<button class="join-item btn btn-disabled btn-xl">Next »</button>
+				<button class="join-item btn btn-disabled lg:btn-xl">Next »</button>
 			{/if}
 		</div>
 	{/if}
