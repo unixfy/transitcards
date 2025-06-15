@@ -16,7 +16,7 @@ export async function load({ fetch, url }) {
         readItems('transit_cards', {
             limit: limit,
             page: currentPage,
-            sort: ['-binder_page_number', 'date_acquired', 'name'],
+            sort: ['-binder_page_number', '-date_acquired', 'name'],
             fields: ['id', 'name', 'date_acquired', 'image', 'issuing_agency.name', 'issuing_agency.city', 'notes']
         })
     );
