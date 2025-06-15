@@ -3,13 +3,6 @@
 
   export let data;
 
-  // Helper function to format the date
-  function formatDate(dateString) {
-      if (!dateString) return '';
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      return new Date(dateString).toLocaleDateString(undefined, options);
-  }
-
   // Function to handle navigation
   function handleNavigation() {
     if (window.history.length > 2) {
@@ -69,7 +62,7 @@
             {#if data.transit_card.date_acquired}
               <div class="font-mono">
                 <div class="text-xs text-neutral-content/70">ACQUISITION DATE</div>
-                <div class="text-lg text-neutral-content">{formatDate(data.transit_card.date_acquired)}</div>
+                <div class="text-lg text-neutral-content">{data.transit_card.date_acquired}</div>
               </div>
             {/if}
           </div>

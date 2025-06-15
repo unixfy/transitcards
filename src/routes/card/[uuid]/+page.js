@@ -7,6 +7,14 @@ function isValidUUID(uuid) {
     return uuidRegex.test(uuid);
 }
 
+
+// Helper function to format the date
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
 export async function load({ fetch, params }) {
     const directus = getDirectusInstance(fetch);
 
@@ -28,6 +36,12 @@ export async function load({ fetch, params }) {
         error(500, 'Unexpected number of results');
     } else {
         // Exactly one result, return the item
+
+        // format the date first - if date_acquired is not null
+        if (response[0].date_acquired) {
+            response[0].date_acquired = formatDate(response[0].date_acquired);
+        }
+
         return {
             transit_card: response[0],
             title: response[0].name || 'Transit Card Details'
