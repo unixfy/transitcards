@@ -73,7 +73,7 @@
 				<div class="mt-6 text-center">
 					<a
 						href="/feeling-lucky"
-						class="btn btn-lg btn-block bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 text-base-300 inline-flex items-center gap-2 font-mono text-sm"
+						class="btn btn-lg btn-block bg-secondary hover:bg-neutral border-neutral-content/20 text-secondary-content inline-flex items-center gap-2 font-mono text-sm"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -102,7 +102,7 @@
 		{#each data.transit_cards as card (card.id)}
 			<a
 				href={`/card/${card.id}`}
-				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
+				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all lg:hover:scale-105 hover:shadow-2xl"
 				in:receive={{ key: card.id }}
 				out:send={{ key: card.id }}
 			>
@@ -117,7 +117,7 @@
 					<!-- Card Image with Transit-style Frame -->
 					<div class="bg-neutral-content/5 relative overflow-hidden rounded-xl">
 						<div
-							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
 						>
 							<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
 						</div>
