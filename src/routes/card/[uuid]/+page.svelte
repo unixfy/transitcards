@@ -82,7 +82,7 @@
         <div class="flex flex-wrap gap-3 pt-4">
           <button 
             on:click={handleNavigation}
-            class="btn btn-lg bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 font-mono text-neutral-content"
+            class="btn btn-block btn-lg bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 font-mono text-neutral-content"
           >
             « Return to Collection
           </button>
