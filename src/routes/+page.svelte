@@ -180,7 +180,7 @@
 			</div>
 
 			{#if data.selectedAgency || data.searchQuery}
-				<div class="flex">
+				<div class="flex flex-col md:flex-row">
 					<div class="bg-neutral-content/5 flex items-center justify-between rounded p-3">
 						<span class="text-neutral-content/70 font-mono">
 							{#if data.searchQuery}
@@ -190,36 +190,34 @@
 						</span>
 					</div>
 
-					<div class="ml-auto pt-2">
-						<button
-							type="button"
-							class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20"
-							on:click={async () => {
-								searchInput = '';
-								const url = new URL(window.location);
-								url.searchParams.delete('search');
-								url.searchParams.delete('agency');
-								url.searchParams.set('page', '1');
-								await goto(url.pathname + url.search, { noScroll: true });
-							}}
+					<button
+						type="button"
+						class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 md:ml-auto mt-3 md:mt-0"
+						on:click={async () => {
+							searchInput = '';
+							const url = new URL(window.location);
+							url.searchParams.delete('search');
+							url.searchParams.delete('agency');
+							url.searchParams.set('page', '1');
+							await goto(url.pathname + url.search, { noScroll: true });
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
+							></line></svg
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="24"
-								height="24"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
-								></line></svg
-							>
 
-							Clear All Filters
-						</button>
-					</div>
+						Clear All Filters
+					</button>
 				</div>
 			{/if}
 		</form>
