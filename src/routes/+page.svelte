@@ -3,8 +3,11 @@
 	import { crossfade } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	let currentTime = new Date().toLocaleTimeString();
+	let searchInput = data.searchQuery || '';
+	let isSearching = false;
 
 	onMount(() => {
 		const timer = setInterval(() => {
@@ -15,6 +18,34 @@
 			clearInterval(timer);
 		};
 	});
+
+	// Handle search form submission
+	async function handleSearch(e) {
+		e.preventDefault();
+		isSearching = true;
+		const url = new URL(window.location);
+		if (searchInput.trim()) {
+			url.searchParams.set('search', searchInput);
+		} else {
+			url.searchParams.delete('search');
+		}
+		url.searchParams.set('page', '1');
+		await goto(url.pathname + url.search);
+		isSearching = false;
+	}
+
+	// Handle agency filter change
+	async function handleAgencyChange(e) {
+		const value = e.target.value;
+		const url = new URL(window.location);
+		if (value) {
+			url.searchParams.set('agency', value);
+		} else {
+			url.searchParams.delete('agency');
+		}
+		url.searchParams.set('page', '1');
+		await goto(url.pathname + url.search);
+	}
 
 	const [send, receive] = crossfade({
 		duration: (d) => Math.sqrt(d * 200), // Adjust duration as needed
@@ -61,7 +92,7 @@
 				<div class="grid grid-cols-1 gap-4 font-mono md:grid-cols-2">
 					<div class="bg-neutral-content/5 rounded p-4 uppercase">
 						<div class="text-sm opacity-70">Total Cards</div>
-						<div class="text-accent text-2xl">{data.totalCount}</div>
+						<div class="text-accent text-2xl">{data.totalAllCards}</div>
 					</div>
 					<div class="bg-neutral-content/5 rounded p-4 uppercase">
 						<div class="text-sm opacity-70">System Status</div>
@@ -98,11 +129,94 @@
 </div>
 
 <div class="container mx-auto px-4 py-10">
+	<!-- Search & Filter Section -->
+	<div class="border-neutral-content/20 mx-auto mb-6 rounded-lg border bg-black/80 p-6">
+		<form on:submit={handleSearch} class="space-y-4">
+			<!-- Filter by Agency Dropdown -->
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<div>
+					<label for="agency-filter" class="mb-2 block font-mono text-white uppercase"
+						>Filter by Agency</label
+					>
+					<select
+						id="agency-filter"
+						class="select select-bordered border-neutral-content/20 text-neutral-content w-full bg-black/80"
+						value={data.selectedAgency || ''}
+						on:change={handleAgencyChange}
+					>
+						<option value="">All Agencies</option>
+						{#each data.agencies as agency (agency.id)}
+							<option value={agency.id}>{agency.name} - {agency.city}</option>
+						{/each}
+					</select>
+				</div>
+
+				<!-- Server-Side Full-Text Search -->
+				<div>
+					<label for="search-input" class="mb-2 block font-mono text-white uppercase"
+						>Search Cards</label
+					>
+					<div class="flex gap-2">
+						<input
+							id="search-input"
+							type="text"
+							placeholder="Search by name, agency, city, or notes..."
+							bind:value={searchInput}
+							class="input input-bordered border-neutral-content/20 text-neutral-content placeholder-neutral-content/40 flex-1 bg-black/80"
+						/>
+						<button
+							type="submit"
+							class="btn btn-neutral border-neutral-content/20"
+							disabled={isSearching}
+						>
+							{#if isSearching}
+								<span class="loading loading-spinner h-5 w-5"></span>
+							{:else}
+								Search
+							{/if}
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{#if data.selectedAgency || data.searchQuery}
+				<div class="flex">
+					<div class="bg-neutral-content/5 flex items-center justify-between rounded p-3">
+						<span class="text-neutral-content/70 font-mono text-sm">
+							{#if data.searchQuery}
+								Search: "<span class="text-neutral-content">{data.searchQuery}</span>" -
+							{/if}
+
+							{data.transit_cards.length} result{data.transit_cards.length !== 1 ? 's' : ''}
+						</span>
+					</div>
+
+					<div class="ml-auto pt-2">
+						<button
+							type="button"
+							class="btn btn-outline outline-warning border-neutral-content/20 text-neutral-content hover:bg-neutral/20"
+							on:click={async () => {
+								searchInput = '';
+								const url = new URL(window.location);
+								url.searchParams.delete('search');
+								url.searchParams.delete('agency');
+								url.searchParams.set('page', '1');
+								await goto(url.pathname + url.search);
+							}}
+						>
+							Clear All Filters
+						</button>
+					</div>
+				</div>
+			{/if}
+		</form>
+	</div>
+
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 		{#each data.transit_cards as card (card.id)}
 			<a
 				href={`/card/${card.id}`}
-				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all lg:hover:scale-105 hover:shadow-2xl"
+				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:scale-105"
 				in:receive={{ key: card.id }}
 				out:send={{ key: card.id }}
 			>
@@ -151,7 +265,12 @@
 		<div class="join mt-8 flex justify-center">
 			<!-- Previous Button -->
 			{#if data.currentPage > 1}
-				<a href="?page={data.currentPage - 1}" class="join-item btn lg:btn-xl">« Prev</a>
+				<a
+					href="?page={data.currentPage - 1}{data.selectedAgency
+						? `&agency=${data.selectedAgency}`
+						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
+					class="join-item btn lg:btn-xl">« Prev</a
+				>
 			{:else}
 				<button class="join-item btn btn-disabled lg:btn-xl">« Prev</button>
 			{/if}
@@ -162,7 +281,12 @@
 				{#if pageNum === data.currentPage}
 					<button class="join-item btn lg:btn-xl btn-active">{pageNum}</button>
 				{:else if pageNum === 1 || pageNum === data.totalPages || (pageNum >= data.currentPage - 2 && pageNum <= data.currentPage + 2)}
-					<a href="?page={pageNum}" class="join-item btn lg:btn-xl">{pageNum}</a>
+					<a
+						href="?page={pageNum}{data.selectedAgency
+							? `&agency=${data.selectedAgency}`
+							: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
+						class="join-item btn lg:btn-xl">{pageNum}</a
+					>
 				{:else if (pageNum === data.currentPage - 3 && pageNum > 1 && data.currentPage - 3 !== 1) || (pageNum === data.currentPage + 3 && pageNum < data.totalPages && data.currentPage + 3 !== data.totalPages)}
 					<button class="join-item btn lg:btn-xl btn-disabled">...</button>
 				{/if}
@@ -170,10 +294,21 @@
 
 			<!-- Next Button -->
 			{#if data.currentPage < data.totalPages}
-				<a href="?page={data.currentPage + 1}" class="join-item btn lg:btn-xl">Next »</a>
+				<a
+					href="?page={data.currentPage + 1}{data.selectedAgency
+						? `&agency=${data.selectedAgency}`
+						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
+					class="join-item btn lg:btn-xl">Next »</a
+				>
 			{:else}
 				<button class="join-item btn btn-disabled lg:btn-xl">Next »</button>
 			{/if}
+		</div>
+	{:else if data.transit_cards.length === 0}
+		<div class="border-neutral-content/20 mt-8 rounded-lg border bg-black/80 p-8 text-center">
+			<p class="text-neutral-content/70 font-mono text-lg">
+				No cards found. Try adjusting your search or filters.
+			</p>
 		</div>
 	{/if}
 </div>
