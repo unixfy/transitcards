@@ -12,7 +12,7 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@directus/sdk": "^19.1.0",
+		"@directus/sdk": "^22.0.0",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.39.2",
 		"@fontsource/ibm-plex-mono": "^5.2.5",
