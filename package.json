@@ -19,7 +19,7 @@
 		"@fontsource/ibm-plex-sans": "^5.2.5",
 		"@fontsource/space-grotesk": "^5.2.10",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "^2.69.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.1",
 		"daisyui": "^5.6.1",
