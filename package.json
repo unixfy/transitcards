@@ -22,7 +22,7 @@
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@tailwindcss/vite": "^4.3.3",
-		"daisyui": "^5.7.28",
+		"daisyui": "^5.7.38",
 		"eslint": "^10.10.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.23.0",
@@ -32,6 +32,6 @@
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"svelte": "^5.57.0",
 		"tailwindcss": "^4.3.2",
-		"vite": "^8.2.2"
+		"vite": "^8.3.0"
 	}
 }
