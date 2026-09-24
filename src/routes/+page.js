@@ -4,8 +4,8 @@ import { readItems } from '@directus/sdk';
 export async function load({ fetch, url }) {
 	const directus = getDirectusInstance(fetch);
 	const limit = 36;
-
-	const currentPage = 1;
+	const pageParam = Number.parseInt(url.searchParams.get('page') || '1', 10);
+	const requestedPage = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
 	const agencyFilter = url.searchParams.get('agency');
 	const searchQuery = url.searchParams.get('search') || '';
 
@@ -34,8 +34,8 @@ export async function load({ fetch, url }) {
 
 	const transitCardsPromise = directus.request(
 		readItems('transit_cards', {
-			limit,
-			page: currentPage,
+			limit: limit * requestedPage,
+			page: 1,
 			sort: ['-binder_page_number', '-date_acquired', 'name'],
 			fields: [
 				'id',
@@ -84,6 +84,7 @@ export async function load({ fetch, url }) {
 	const totalCount = totalResultCardsDataAgg[0]?.count?.id || 0;
 	const totalAllCards = totalAllCardsDataAgg[0]?.count?.id || 0;
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / limit) : 0;
+	const currentPage = totalPages > 0 ? Math.min(requestedPage, totalPages) : 1;
 
 	return {
 		transit_cards,

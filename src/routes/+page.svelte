@@ -14,10 +14,13 @@
 	let hasMoreCards = data.currentPage < data.totalPages;
 	let observerTarget;
 	let observer;
-	$: cards = data.transit_cards;
-	$: currentPage = data.currentPage;
-	$: hasMoreCards = data.currentPage < data.totalPages;
-	$: if (!hasMoreCards) {
+	let lastServerCards = data.transit_cards;
+
+	$: if (data.transit_cards !== lastServerCards) {
+		lastServerCards = data.transit_cards;
+		cards = data.transit_cards;
+		currentPage = data.currentPage;
+		hasMoreCards = data.currentPage < data.totalPages;
 		isLoadingMore = false;
 	}
 
@@ -46,7 +49,21 @@
 	});
 
 	$: if (observer && observerTarget) {
-		observer.observe(observerTarget);
+		if (hasMoreCards) {
+			observer.observe(observerTarget);
+		} else {
+			observer.unobserve(observerTarget);
+		}
+	}
+
+	function updatePageInUrl(pageNumber) {
+		const url = new URL(window.location.href);
+		if (pageNumber > 1) {
+			url.searchParams.set('page', String(pageNumber));
+		} else {
+			url.searchParams.delete('page');
+		}
+		window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
 	}
 
 	async function loadMoreCards() {
@@ -76,6 +93,7 @@
 			cards = [...cards, ...nextData.transit_cards];
 			currentPage = nextData.currentPage;
 			hasMoreCards = nextData.hasMore;
+			updatePageInUrl(currentPage);
 		} finally {
 			isLoadingMore = false;
 		}
@@ -154,7 +172,7 @@
 		<div class="mx-auto mt-4 max-w-5xl">
 			<a
 				href="/feeling-lucky"
-				class="btn btn-primary btn-lg md:btn-xl shadow-primary/30 border-primary/40 text-primary-content hover:brightness-110 w-full font-display tracking-wide"
+				class="btn btn-primary btn-lg md:btn-xl shadow-primary/30 border-primary/40 text-primary-content hover:brightness-110 h-auto w-full whitespace-normal px-4 py-4 text-center leading-snug font-display tracking-wide"
 			>
 				🎲 I'm Feeling Lucky — Show a Random Card
 			</a>
@@ -239,11 +257,11 @@
 	</div>
 
 	<div class="mx-auto max-w-6xl">
-		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+		<div class="columns-2 gap-3 space-y-3 sm:columns-3 lg:columns-4 xl:columns-5">
 			{#each cards as card (card.id)}
 				<a
 					href={`/card/${card.id}`}
-					class="group border-neutral-content/15 block overflow-hidden rounded-xl border bg-black/70 shadow-lg transition-all hover:shadow-xl lg:hover:-translate-y-1"
+					class="group border-neutral-content/15 mb-3 inline-block w-full break-inside-avoid overflow-hidden rounded-xl border bg-black/70 shadow-lg transition-all hover:shadow-xl lg:hover:-translate-y-1"
 					in:receive={{ key: card.id }}
 					out:send={{ key: card.id }}
 				>
@@ -261,9 +279,14 @@
 						/>
 					</div>
 					<div class="space-y-1 p-2 sm:p-3">
-						<h3 class="font-display text-primary truncate text-sm leading-tight sm:text-base">{card.name}</h3>
-						<p class="text-neutral-content/70 truncate font-mono text-[10px] uppercase sm:text-xs">
+						<h3 class="font-display text-primary text-sm leading-tight break-words sm:text-base">
+							{card.name}
+						</h3>
+						<p class="text-neutral-content/70 font-mono text-[10px] uppercase break-words sm:text-xs">
 							{card.issuing_agency.name}
+						</p>
+						<p class="text-neutral-content/60 font-mono text-[10px] uppercase break-words sm:text-xs">
+							{card.issuing_agency.city}
 						</p>
 					</div>
 				</a>
