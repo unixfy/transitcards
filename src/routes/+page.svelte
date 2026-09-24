@@ -15,6 +15,25 @@
 	let observerTarget;
 	let observer;
 	let lastServerCards = data.transit_cards;
+	let columnCount = 2;
+
+	function getColumnCount(width) {
+		if (width >= 1280) {
+			return 5;
+		}
+		if (width >= 1024) {
+			return 4;
+		}
+		if (width >= 640) {
+			return 3;
+		}
+		return 2;
+	}
+
+	$: masonryColumns = Array.from({ length: columnCount }, () => []);
+	$: cards.forEach((card, index) => {
+		masonryColumns[index % columnCount].push(card);
+	});
 
 	$: if (data.transit_cards !== lastServerCards) {
 		lastServerCards = data.transit_cards;
@@ -28,6 +47,9 @@
 		const timer = setInterval(() => {
 			currentTime = new Date().toLocaleTimeString();
 		}, 1000);
+		const handleResize = () => {
+			columnCount = getColumnCount(window.innerWidth);
+		};
 
 		observer = new IntersectionObserver(
 			(entries) => {
@@ -41,10 +63,13 @@
 		if (observerTarget) {
 			observer.observe(observerTarget);
 		}
+		handleResize();
+		window.addEventListener('resize', handleResize);
 
 		return () => {
 			clearInterval(timer);
 			observer?.disconnect();
+			window.removeEventListener('resize', handleResize);
 		};
 	});
 
@@ -153,7 +178,7 @@
 				<div>{currentTime}</div>
 			</div>
 
-			<div class="flex items-end justify-between gap-3">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1
 						class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent sm:text-3xl md:text-4xl"
@@ -162,7 +187,7 @@
 					</h1>
 					<p class="text-base-300 mt-1 font-mono text-xs uppercase sm:text-sm">Card binder view</p>
 				</div>
-				<div class="bg-neutral-content/5 rounded px-3 py-2 text-right font-mono uppercase">
+				<div class="bg-neutral-content/5 w-fit rounded px-3 py-2 text-left font-mono uppercase sm:text-right">
 					<div class="text-[10px] opacity-70 sm:text-xs">Total Cards</div>
 					<div class="text-accent text-lg sm:text-xl">{data.totalAllCards}</div>
 				</div>
@@ -257,39 +282,43 @@
 	</div>
 
 	<div class="mx-auto max-w-6xl">
-		<div class="columns-2 gap-3 space-y-3 sm:columns-3 lg:columns-4 xl:columns-5">
-			{#each cards as card (card.id)}
-				<a
-					href={`/card/${card.id}`}
-					class="group border-neutral-content/15 mb-3 inline-block w-full break-inside-avoid overflow-hidden rounded-xl border bg-black/70 shadow-lg transition-all hover:shadow-xl lg:hover:-translate-y-1"
-					in:receive={{ key: card.id }}
-					out:send={{ key: card.id }}
-				>
-					<div class="relative overflow-hidden">
-						<div
-							class="absolute inset-0 hidden items-center justify-center bg-black/25 opacity-0 backdrop-blur-sm transition-opacity lg:flex lg:group-hover:opacity-100"
+		<div class="grid gap-3" style={`grid-template-columns: repeat(${columnCount}, minmax(0, 1fr));`}>
+			{#each masonryColumns as column}
+				<div class="space-y-3">
+					{#each column as card (card.id)}
+						<a
+							href={`/card/${card.id}`}
+							class="group border-neutral-content/15 block w-full overflow-hidden rounded-xl border bg-black/70 shadow-lg transition-all hover:shadow-xl lg:hover:-translate-y-1"
+							in:receive={{ key: card.id }}
+							out:send={{ key: card.id }}
 						>
-							<span class="text-neutral-content/90 font-mono text-xs">VIEW DETAILS</span>
-						</div>
-						<img
-							src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
-							alt={card.name}
-							class="aspect-[3.375/2.125] w-full object-cover"
-							loading="lazy"
-						/>
-					</div>
-					<div class="space-y-1 p-2 sm:p-3">
-						<h3 class="font-display text-primary text-sm leading-tight break-words sm:text-base">
-							{card.name}
-						</h3>
-						<p class="text-neutral-content/70 font-mono text-[10px] uppercase break-words sm:text-xs">
-							{card.issuing_agency.name}
-						</p>
-						<p class="text-neutral-content/60 font-mono text-[10px] uppercase break-words sm:text-xs">
-							{card.issuing_agency.city}
-						</p>
-					</div>
-				</a>
+							<div class="relative overflow-hidden">
+								<div
+									class="absolute inset-0 hidden items-center justify-center bg-black/25 opacity-0 backdrop-blur-sm transition-opacity lg:flex lg:group-hover:opacity-100"
+								>
+									<span class="text-neutral-content/90 font-mono text-xs">VIEW DETAILS</span>
+								</div>
+								<img
+									src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+									alt={card.name}
+									class="aspect-[3.375/2.125] w-full object-cover"
+									loading="lazy"
+								/>
+							</div>
+							<div class="space-y-1 p-2 sm:p-3">
+								<h3 class="font-display text-primary text-sm leading-tight break-words sm:text-base">
+									{card.name}
+								</h3>
+								<p class="text-neutral-content/70 font-mono text-[10px] uppercase break-words sm:text-xs">
+									{card.issuing_agency.name}
+								</p>
+								<p class="text-neutral-content/60 font-mono text-[10px] uppercase break-words sm:text-xs">
+									{card.issuing_agency.city}
+								</p>
+							</div>
+						</a>
+					{/each}
+				</div>
 			{/each}
 		</div>
 
