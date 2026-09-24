@@ -8,18 +8,82 @@
 	let currentTime = new Date().toLocaleTimeString();
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
+	let isLoadingMore = false;
+	let cards = data.transit_cards;
+	let currentPage = data.currentPage;
+	let hasMoreCards = data.currentPage < data.totalPages;
+	let observerTarget;
+	let observer;
+	let activeQueryKey = '';
+
+	$: queryKey = `${data.selectedAgency || ''}:${data.searchQuery || ''}`;
+	$: if (queryKey !== activeQueryKey) {
+		activeQueryKey = queryKey;
+		cards = data.transit_cards;
+		currentPage = data.currentPage;
+		hasMoreCards = data.currentPage < data.totalPages;
+		isLoadingMore = false;
+	}
 
 	onMount(() => {
 		const timer = setInterval(() => {
 			currentTime = new Date().toLocaleTimeString();
 		}, 1000);
 
+		observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					loadMoreCards();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+
+		if (observerTarget) {
+			observer.observe(observerTarget);
+		}
+
 		return () => {
 			clearInterval(timer);
+			observer?.disconnect();
 		};
 	});
 
-	// Handle search form submission
+	$: if (observer && observerTarget) {
+		observer.observe(observerTarget);
+	}
+
+	async function loadMoreCards() {
+		if (!hasMoreCards || isLoadingMore) {
+			return;
+		}
+
+		isLoadingMore = true;
+		const nextPage = currentPage + 1;
+		const params = new URLSearchParams({ page: String(nextPage) });
+
+		if (data.selectedAgency) {
+			params.set('agency', data.selectedAgency);
+		}
+		if (data.searchQuery) {
+			params.set('search', data.searchQuery);
+		}
+
+		try {
+			const response = await fetch(`/api/transit-cards?${params.toString()}`);
+			if (!response.ok) {
+				return;
+			}
+
+			const nextData = await response.json();
+			cards = [...cards, ...nextData.transit_cards];
+			currentPage = nextData.currentPage;
+			hasMoreCards = nextData.hasMore;
+		} finally {
+			isLoadingMore = false;
+		}
+	}
+
 	async function handleSearch(e) {
 		e.preventDefault();
 		isSearching = true;
@@ -29,12 +93,11 @@
 		} else {
 			url.searchParams.delete('search');
 		}
-		url.searchParams.set('page', '1');
+		url.searchParams.delete('page');
 		await goto(url.pathname + url.search, { noScroll: true });
 		isSearching = false;
 	}
 
-	// Handle agency filter change
 	async function handleAgencyChange(e) {
 		const value = e.target.value;
 		const url = new URL(window.location);
@@ -43,18 +106,18 @@
 		} else {
 			url.searchParams.delete('agency');
 		}
-		url.searchParams.set('page', '1');
+		url.searchParams.delete('page');
 		await goto(url.pathname + url.search, { noScroll: true });
 	}
 
 	const [send, receive] = crossfade({
-		duration: (d) => Math.sqrt(d * 200), // Adjust duration as needed
-		fallback(node, params) {
+		duration: (d) => Math.sqrt(d * 200),
+		fallback(node) {
 			const style = getComputedStyle(node);
 			const transform = style.transform === 'none' ? '' : style.transform;
 
 			return {
-				duration: 300, // Fallback duration
+				duration: 300,
 				easing: quintOut,
 				css: (t) => `
           transform: ${transform} scale(${t});
@@ -65,82 +128,54 @@
 	});
 </script>
 
-<div class="bg-base-200 text-neutral-content min-h-[300px] py-10">
-	<div class="container mx-auto px-4">
-		<div class="border-neutral-content/20 mx-auto max-w-4xl rounded-lg border bg-black/80 p-6">
-			<!-- Transit Board Header -->
+<div class="bg-base-200 text-neutral-content py-6 md:py-8">
+	<div class="container mx-auto px-3 sm:px-4">
+		<div class="border-neutral-content/20 mx-auto max-w-5xl rounded-lg border bg-black/85 p-4 md:p-6">
 			<div
-				class="border-neutral-content/20 mb-4 flex items-center justify-between border-b pb-2 font-mono text-sm uppercase"
+				class="border-neutral-content/20 mb-3 flex items-center justify-between border-b pb-2 font-mono text-[11px] uppercase sm:text-xs"
 			>
 				<div>Transit Card Collection</div>
 				<div>{currentTime}</div>
 			</div>
 
-			<!-- Main Display -->
-			<div class="space-y-6">
-				<!-- Welcome Message -->
-				<div class="bg-neutral-content/5 rounded p-4 uppercase">
+			<div class="flex items-end justify-between gap-3">
+				<div>
 					<h1
-						class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl"
+						class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent sm:text-3xl md:text-4xl"
 					>
 						Alex's Transit Cards
 					</h1>
-					<div class="text-base-300 mt-2 font-mono text-2xl md:text-3xl">Next Train - Due</div>
+					<p class="text-base-300 mt-1 font-mono text-xs uppercase sm:text-sm">Card binder view</p>
 				</div>
-
-				<!-- Status Display -->
-				<div class="grid grid-cols-1 gap-4 font-mono md:grid-cols-2">
-					<div class="bg-neutral-content/5 rounded p-4 uppercase">
-						<div class="text-sm opacity-70">Total Cards</div>
-						<div class="text-accent text-2xl">{data.totalAllCards}</div>
-					</div>
-					<div class="bg-neutral-content/5 rounded p-4 uppercase">
-						<div class="text-sm opacity-70">System Status</div>
-						<div class="text-success text-2xl">Good Service</div>
-					</div>
-				</div>
-
-				<!-- I'm feeling lucky button -->
-				<div class="mt-6 text-center">
-					<a
-						href="/feeling-lucky"
-						class="btn btn-lg btn-block bg-secondary hover:bg-neutral border-neutral-content/20 text-secondary-content inline-flex items-center gap-2 font-mono text-sm"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="h-5 w-5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-							/>
-						</svg>
-						I'm Feeling Lucky - Random Card!
-					</a>
+				<div class="bg-neutral-content/5 rounded px-3 py-2 text-right font-mono uppercase">
+					<div class="text-[10px] opacity-70 sm:text-xs">Total Cards</div>
+					<div class="text-accent text-lg sm:text-xl">{data.totalAllCards}</div>
 				</div>
 			</div>
+		</div>
+
+		<div class="mx-auto mt-4 max-w-5xl">
+			<a
+				href="/feeling-lucky"
+				class="btn btn-primary btn-lg md:btn-xl shadow-primary/30 border-primary/40 text-primary-content hover:brightness-110 w-full font-display tracking-wide"
+			>
+				🎲 I'm Feeling Lucky — Show a Random Card
+			</a>
 		</div>
 	</div>
 </div>
 
-<div class="container mx-auto px-4 py-10">
-	<!-- Search & Filter Section -->
-	<div class="border-neutral-content/20 mx-auto mb-6 rounded-lg border bg-black/80 p-6">
-		<form on:submit={handleSearch} class="space-y-4">
-			<!-- Filter by Agency Dropdown -->
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+<div class="container mx-auto px-3 py-4 sm:px-4 md:py-6">
+	<div class="border-neutral-content/20 mx-auto mb-4 max-w-5xl rounded-lg border bg-black/85 p-3 md:p-4">
+		<form on:submit={handleSearch} class="space-y-3">
+			<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 				<div>
-					<label for="agency-filter" class="mb-2 block font-mono text-white uppercase"
-						>Filter by Agency</label
+					<label for="agency-filter" class="mb-1 block font-mono text-xs text-white uppercase"
+						>Agency</label
 					>
 					<select
 						id="agency-filter"
-						class="select select-bordered border-neutral-content/20 text-neutral-content w-full bg-black/80"
+						class="select select-bordered border-neutral-content/20 text-neutral-content h-10 w-full bg-black/80"
 						value={data.selectedAgency || ''}
 						on:change={handleAgencyChange}
 					>
@@ -151,26 +186,25 @@
 					</select>
 				</div>
 
-				<!-- Server-Side Full-Text Search -->
 				<div>
-					<label for="search-input" class="mb-2 block font-mono text-white uppercase"
-						>Search Cards</label
+					<label for="search-input" class="mb-1 block font-mono text-xs text-white uppercase"
+						>Search</label
 					>
 					<div class="flex gap-2">
 						<input
 							id="search-input"
 							type="text"
-							placeholder="Search by name, agency, city, or notes..."
+							placeholder="Name, agency, city, notes"
 							bind:value={searchInput}
-							class="input input-bordered border-neutral-content/20 text-neutral-content placeholder-neutral-content/40 flex-1 bg-black/80"
+							class="input input-bordered border-neutral-content/20 text-neutral-content placeholder-neutral-content/40 h-10 flex-1 bg-black/80"
 						/>
 						<button
 							type="submit"
-							class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20"
+							class="btn btn-neutral border-neutral-content/20 h-10 bg-neutral-content/5 px-4"
 							disabled={isSearching}
 						>
 							{#if isSearching}
-								<span class="loading loading-spinner h-5 w-5"></span>
+								<span class="loading loading-spinner h-4 w-4"></span>
 							{:else}
 								Search
 							{/if}
@@ -180,71 +214,47 @@
 			</div>
 
 			{#if data.selectedAgency || data.searchQuery}
-				<div class="flex flex-col md:flex-row">
-					<div class="bg-neutral-content/5 flex items-center justify-between rounded p-3">
-						<span class="text-neutral-content/70 font-mono">
-							{#if data.searchQuery}
-								Search: "<span class="text-neutral-content">{data.searchQuery}</span>" -
-							{/if}
-							{data.totalCount} result{data.totalCount == 1 ? '' : 's'} found
-						</span>
+				<div class="flex flex-col gap-2 md:flex-row md:items-center">
+					<div class="bg-neutral-content/5 rounded px-3 py-2 font-mono text-xs text-neutral-200">
+						{#if data.searchQuery}
+							Search: "<span class="text-neutral-content">{data.searchQuery}</span>" ·
+						{/if}
+						{data.totalCount} result{data.totalCount == 1 ? '' : 's'}
 					</div>
 
 					<button
 						type="button"
-						class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 md:ml-auto mt-3 md:mt-0"
+						class="btn btn-neutral border-neutral-content/20 h-10 bg-neutral-content/5 md:ml-auto"
 						on:click={async () => {
 							searchInput = '';
 							const url = new URL(window.location);
 							url.searchParams.delete('search');
 							url.searchParams.delete('agency');
-							url.searchParams.set('page', '1');
+							url.searchParams.delete('page');
 							await goto(url.pathname + url.search, { noScroll: true });
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
-							></line></svg
-						>
-
-						Clear All Filters
+						Clear Filters
 					</button>
 				</div>
 			{/if}
 		</form>
 	</div>
 
-	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-		{#each data.transit_cards as card (card.id)}
-			<a
-				href={`/card/${card.id}`}
-				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:scale-105"
-				in:receive={{ key: card.id }}
-				out:send={{ key: card.id }}
-			>
-				<!-- Transit Card Header -->
-				<div
-					class="bg-neutral-content/5 text-neutral-content/70 border-neutral-content/20 flex items-center justify-between border-b px-4 py-2 font-mono text-xs"
+	<div class="mx-auto max-w-6xl">
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+			{#each cards as card (card.id)}
+				<a
+					href={`/card/${card.id}`}
+					class="group border-neutral-content/15 block overflow-hidden rounded-xl border bg-black/70 shadow-lg transition-all hover:shadow-xl lg:hover:-translate-y-1"
+					in:receive={{ key: card.id }}
+					out:send={{ key: card.id }}
 				>
-					<span>CARD #{card.id.slice(-8)}</span>
-				</div>
-
-				<div class="space-y-4 p-4">
-					<!-- Card Image with Transit-style Frame -->
-					<div class="bg-neutral-content/5 relative overflow-hidden rounded-xl">
+					<div class="relative overflow-hidden">
 						<div
-							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
+							class="absolute inset-0 hidden items-center justify-center bg-black/25 opacity-0 backdrop-blur-sm transition-opacity lg:flex lg:group-hover:opacity-100"
 						>
-							<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
+							<span class="text-neutral-content/90 font-mono text-xs">VIEW DETAILS</span>
 						</div>
 						<img
 							src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
@@ -253,73 +263,28 @@
 							loading="lazy"
 						/>
 					</div>
-
-					<!-- Card Information -->
-					<div class="space-y-2">
-						<h3 class="font-display text-primary text-xl">{card.name}</h3>
-						<div class="bg-neutral-content/5 space-y-1 rounded p-2">
-							<div class="text-neutral-content/70 font-mono text-xs">ISSUING AGENCY</div>
-							<div class="text-neutral-content font-mono text-sm">{card.issuing_agency.name}</div>
-						</div>
-						<div class="bg-neutral-content/5 space-y-1 rounded p-2">
-							<div class="text-neutral-content/70 font-mono text-xs">LOCATION</div>
-							<div class="text-neutral-content font-mono text-sm">{card.issuing_agency.city}</div>
-						</div>
+					<div class="space-y-1 p-2 sm:p-3">
+						<h3 class="font-display text-primary truncate text-sm leading-tight sm:text-base">{card.name}</h3>
+						<p class="text-neutral-content/70 truncate font-mono text-[10px] uppercase sm:text-xs">
+							{card.issuing_agency.name}
+						</p>
 					</div>
-				</div>
-			</a>
-		{/each}
-	</div>
-
-	<!-- Pagination Controls -->
-	{#if data.totalPages > 1}
-		<div class="join mt-8 flex justify-center">
-			<!-- Previous Button -->
-			{#if data.currentPage > 1}
-				<a
-					href="?page={data.currentPage - 1}{data.selectedAgency
-						? `&agency=${data.selectedAgency}`
-						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-					class="join-item btn lg:btn-xl">« Prev</a
-				>
-			{:else}
-				<button class="join-item btn btn-disabled lg:btn-xl">« Prev</button>
-			{/if}
-
-			<!-- Page Number Buttons -->
-			{#each Array(data.totalPages) as _, i}
-				{@const pageNum = i + 1}
-				{#if pageNum === data.currentPage}
-					<button class="join-item btn lg:btn-xl btn-active">{pageNum}</button>
-				{:else if pageNum === 1 || pageNum === data.totalPages || (pageNum >= data.currentPage - 2 && pageNum <= data.currentPage + 2)}
-					<a
-						href="?page={pageNum}{data.selectedAgency
-							? `&agency=${data.selectedAgency}`
-							: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-						class="join-item btn lg:btn-xl">{pageNum}</a
-					>
-				{:else if (pageNum === data.currentPage - 3 && pageNum > 1 && data.currentPage - 3 !== 1) || (pageNum === data.currentPage + 3 && pageNum < data.totalPages && data.currentPage + 3 !== data.totalPages)}
-					<button class="join-item btn lg:btn-xl btn-disabled">...</button>
-				{/if}
+				</a>
 			{/each}
+		</div>
 
-			<!-- Next Button -->
-			{#if data.currentPage < data.totalPages}
-				<a
-					href="?page={data.currentPage + 1}{data.selectedAgency
-						? `&agency=${data.selectedAgency}`
-						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-					class="join-item btn lg:btn-xl">Next »</a
-				>
-			{:else}
-				<button class="join-item btn btn-disabled lg:btn-xl">Next »</button>
-			{/if}
-		</div>
-	{:else if data.transit_cards.length === 0}
-		<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-8 text-center">
-			<p class="text-neutral-content/70 font-mono text-lg">
-				Oops! No cards found. Try adjusting your search or filters.
-			</p>
-		</div>
-	{/if}
+		{#if cards.length > 0}
+			<div bind:this={observerTarget} class="mt-6 flex min-h-10 items-center justify-center">
+				{#if isLoadingMore}
+					<span class="loading loading-spinner loading-lg"></span>
+				{:else if !hasMoreCards}
+					<span class="text-neutral-content/60 font-mono text-xs uppercase">End of binder</span>
+				{/if}
+			</div>
+		{:else}
+			<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-6 text-center">
+				<p class="text-neutral-content/70 font-mono text-sm">Oops! No cards found.</p>
+			</div>
+		{/if}
+	</div>
 </div>
