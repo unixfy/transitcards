@@ -14,14 +14,10 @@
 	let hasMoreCards = data.currentPage < data.totalPages;
 	let observerTarget;
 	let observer;
-	let activeQueryKey = '';
-
-	$: queryKey = `${data.selectedAgency || ''}:${data.searchQuery || ''}`;
-	$: if (queryKey !== activeQueryKey) {
-		activeQueryKey = queryKey;
-		cards = data.transit_cards;
-		currentPage = data.currentPage;
-		hasMoreCards = data.currentPage < data.totalPages;
+	$: cards = data.transit_cards;
+	$: currentPage = data.currentPage;
+	$: hasMoreCards = data.currentPage < data.totalPages;
+	$: if (!hasMoreCards) {
 		isLoadingMore = false;
 	}
 
@@ -60,17 +56,18 @@
 
 		isLoadingMore = true;
 		const nextPage = currentPage + 1;
-		const params = new URLSearchParams({ page: String(nextPage) });
+		const nextUrl = new URL('/api/transit-cards', window.location.origin);
+		nextUrl.searchParams.set('page', String(nextPage));
 
 		if (data.selectedAgency) {
-			params.set('agency', data.selectedAgency);
+			nextUrl.searchParams.set('agency', data.selectedAgency);
 		}
 		if (data.searchQuery) {
-			params.set('search', data.searchQuery);
+			nextUrl.searchParams.set('search', data.searchQuery);
 		}
 
 		try {
-			const response = await fetch(`/api/transit-cards?${params.toString()}`);
+			const response = await fetch(`${nextUrl.pathname}${nextUrl.search}`);
 			if (!response.ok) {
 				return;
 			}
