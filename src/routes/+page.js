@@ -3,7 +3,7 @@ import { readItems } from '@directus/sdk';
 
 export async function load({ fetch, url }) {
     const directus = getDirectusInstance(fetch);
-    const limit = 36; // Results per page
+    const limit = 50; // Results per page
 
     const pageParam = url.searchParams.get('page');
     const agencyFilter = url.searchParams.get('agency');
@@ -61,14 +61,6 @@ export async function load({ fetch, url }) {
         })
     );
 
-    // Fetch total count of ALL transit cards (unfiltered)
-    const totalAllCardsPromise = directus.request(
-        readItems('transit_cards', {
-            limit: -1,
-            aggregate: { count: ['id'] }
-        })
-    );
-
     // Fetch all unique issuing agencies for the dropdown
     const agenciesPromise = directus.request(
         readItems('transit_cards_agencies', {
@@ -78,15 +70,13 @@ export async function load({ fetch, url }) {
         })
     );
 
-    const [transit_cards, totalResultCardsDataAgg, totalAllCardsDataAgg, agencies] = await Promise.all([
+    const [transit_cards, totalResultCardsDataAgg, agencies] = await Promise.all([
         transitCardsPromise,
         totalResultCardsCountPromise,
-        totalAllCardsPromise,
         agenciesPromise
     ]);
 
     const totalCount = totalResultCardsDataAgg[0]?.count?.id || 0;
-    const totalAllCards = totalAllCardsDataAgg[0]?.count?.id || 0;
     const totalPages = totalCount > 0 ? Math.ceil(totalCount / limit) : 0;
 
     return {
@@ -95,7 +85,6 @@ export async function load({ fetch, url }) {
         currentPage: currentPage,
         totalPages: totalPages,
         totalCount: totalCount,
-        totalAllCards: totalAllCards,
         selectedAgency: agencyFilter || null,
         searchQuery: searchQuery,
         title: "Home"

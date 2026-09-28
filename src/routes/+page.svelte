@@ -4,6 +4,7 @@
 	import { quintOut } from 'svelte/easing';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 
 	let currentTime = new Date().toLocaleTimeString();
 	let searchInput = data.searchQuery || '';
@@ -65,28 +66,9 @@
 	});
 </script>
 
-<div class="container mx-auto flex flex-col gap-4 px-4 py-8 md:gap-6">
-	<!-- Jumbotron -->
-	<div class="rounded rounded-lg bg-black/80 p-6 uppercase">
-		<h1
-			class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl"
-		>
-			Alex's Transit Cards
-		</h1>
-		<div class="text-base-300 mt-2 font-mono text-2xl md:text-3xl">
-			{data.totalAllCards} total cards
-		</div>
-	</div>
-
+<div class="flex flex-col gap-4 md:gap-6">
 	<!-- I'm feeling lucky button -->
-	<div class="text-center">
-		<a
-			href="/feeling-lucky"
-			class="btn btn-xl btn-block from-primary to-secondary border-neutral-content/20 text-secondary-content inline-flex items-center gap-2 bg-linear-to-r py-8 font-mono text-lg transition-all hover:scale-103 md:py-0 md:text-xl"
-		>
-			🎲 I'm Feeling Lucky - Random Card!
-		</a>
-	</div>
+	<ImFeelingLuckyButton/>
 
 	<!-- Search & Filter Section -->
 	<div class="w-full rounded-lg border bg-black/80 p-6">
