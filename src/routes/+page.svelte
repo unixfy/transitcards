@@ -65,72 +65,31 @@
 	});
 </script>
 
-<div class="bg-base-200 text-neutral-content min-h-[300px] py-10">
-	<div class="container mx-auto px-4">
-		<div class="border-neutral-content/20 mx-auto max-w-6xl rounded-lg border bg-black/80 p-6">
-			<!-- Transit Board Header -->
-			<div
-				class="border-neutral-content/20 mb-4 flex items-center justify-between border-b pb-2 font-mono text-sm uppercase"
-			>
-				<div>Transit Card Collection</div>
-				<div>{currentTime}</div>
-			</div>
-
-			<!-- Main Display -->
-			<div class="space-y-6">
-				<!-- Welcome Message -->
-				<div class="bg-neutral-content/5 rounded p-4 uppercase">
-					<h1
-						class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl"
-					>
-						Alex's Transit Cards
-					</h1>
-					<div class="text-base-300 mt-2 font-mono text-2xl md:text-3xl">Next Train - Due</div>
-				</div>
-
-				<!-- Status Display -->
-				<div class="grid grid-cols-1 gap-4 font-mono md:grid-cols-2">
-					<div class="bg-neutral-content/5 rounded p-4 uppercase">
-						<div class="text-sm opacity-70">Total Cards</div>
-						<div class="text-accent text-2xl">{data.totalAllCards}</div>
-					</div>
-					<div class="bg-neutral-content/5 rounded p-4 uppercase">
-						<div class="text-sm opacity-70">System Status</div>
-						<div class="text-success text-2xl">Good Service</div>
-					</div>
-				</div>
-
-				<!-- I'm feeling lucky button -->
-				<div class="mt-6 text-center">
-					<a
-						href="/feeling-lucky"
-						class="btn btn-lg btn-block bg-secondary hover:bg-neutral border-neutral-content/20 text-secondary-content inline-flex items-center gap-2 font-mono text-sm"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="h-5 w-5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-							/>
-						</svg>
-						I'm Feeling Lucky - Random Card!
-					</a>
-				</div>
-			</div>
+<div class="container mx-auto flex flex-col gap-4 px-4 py-8 md:gap-6">
+	<!-- Jumbotron -->
+	<div class="rounded rounded-lg bg-black/80 p-6 uppercase">
+		<h1
+			class="font-display from-primary to-secondary bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent md:text-5xl"
+		>
+			Alex's Transit Cards
+		</h1>
+		<div class="text-base-300 mt-2 font-mono text-2xl md:text-3xl">
+			{data.totalAllCards} total cards
 		</div>
 	</div>
-</div>
 
-<div class="container mx-auto px-4 py-10">
+	<!-- I'm feeling lucky button -->
+	<div class="text-center">
+		<a
+			href="/feeling-lucky"
+			class="btn btn-xl btn-block from-primary to-secondary border-neutral-content/20 text-secondary-content inline-flex items-center gap-2 bg-linear-to-r py-8 font-mono text-lg transition-all hover:scale-103 md:py-0 md:text-xl"
+		>
+			🎲 I'm Feeling Lucky - Random Card!
+		</a>
+	</div>
+
 	<!-- Search & Filter Section -->
-	<div class="border-neutral-content/20 mx-auto mb-6 rounded-lg border bg-black/80 p-6">
+	<div class="w-full rounded-lg border bg-black/80 p-6">
 		<form on:submit={handleSearch} class="space-y-4">
 			<!-- Filter by Agency Dropdown -->
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -223,39 +182,41 @@
 		</form>
 	</div>
 
-	<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
-		{#each data.transit_cards as card (card.id)}
-			<a
-				href={`/card/${card.id}`}
-				class="group border-neutral-content/20 block overflow-hidden rounded-xl border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:-translate-y-3 lg:hover:scale-105"
-				in:receive={{ key: card.id }}
-				out:send={{ key: card.id }}
-			>
-				<!-- Card Image with Transit-style Frame -->
-				<div class="bg-neutral-content/8 skeleton relative overflow-hidden rounded-xl">
-					<div
-						class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
-					>
-						<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
+	{#if data.totalPages >= 1}
+		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+			{#each data.transit_cards as card (card.id)}
+				<a
+					href={`/card/${card.id}`}
+					class="group border-neutral-content/20 block overflow-hidden rounded-xl border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:-translate-y-3 lg:hover:scale-105"
+					in:receive={{ key: card.id }}
+					out:send={{ key: card.id }}
+				>
+					<!-- Card Image with Transit-style Frame -->
+					<div class="bg-neutral-content/8 skeleton relative overflow-hidden rounded-xl">
+						<div
+							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
+						>
+							<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
+						</div>
+						<img
+							src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+							alt={card.name}
+							class="aspect-[3.375/2.125] w-full object-cover"
+							loading="lazy"
+						/>
 					</div>
-					<img
-						src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
-						alt={card.name}
-						class="aspect-[3.375/2.125] w-full object-cover"
-						loading="lazy"
-					/>
-				</div>
 
-				<div class="space-y-1 p-3">
-					<!-- Card Information -->
-					<h3 class="font-display text-primary text-md leading-5 font-bold">{card.name}</h3>
-					<p class="text-neutral-content font-mono text-xs leading-4">
-						{card.issuing_agency.name} ({card.issuing_agency.city})
-					</p>
-				</div>
-			</a>
-		{/each}
-	</div>
+					<div class="space-y-1 p-3">
+						<!-- Card Information -->
+						<h3 class="font-display text-primary text-md leading-5 font-bold">{card.name}</h3>
+						<p class="text-neutral-content font-mono text-xs leading-4">
+							{card.issuing_agency.name} ({card.issuing_agency.city})
+						</p>
+					</div>
+				</a>
+			{/each}
+		</div>
+	{/if}
 
 	<!-- Pagination Controls -->
 	{#if data.totalPages > 1}
@@ -302,7 +263,7 @@
 			{/if}
 		</div>
 	{:else if data.transit_cards.length === 0}
-		<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-8 text-center">
+		<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-6 text-center">
 			<p class="text-neutral-content/70 font-mono text-lg">
 				Oops! No cards found. Try adjusting your search or filters.
 			</p>
