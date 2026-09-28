@@ -67,7 +67,7 @@
 
 <div class="bg-base-200 text-neutral-content min-h-[300px] py-10">
 	<div class="container mx-auto px-4">
-		<div class="border-neutral-content/20 mx-auto max-w-4xl rounded-lg border bg-black/80 p-6">
+		<div class="border-neutral-content/20 mx-auto max-w-6xl rounded-lg border bg-black/80 p-6">
 			<!-- Transit Board Header -->
 			<div
 				class="border-neutral-content/20 mb-4 flex items-center justify-between border-b pb-2 font-mono text-sm uppercase"
@@ -192,7 +192,7 @@
 
 					<button
 						type="button"
-						class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 md:ml-auto mt-3 md:mt-0"
+						class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 mt-3 md:mt-0 md:ml-auto"
 						on:click={async () => {
 							searchInput = '';
 							const url = new URL(window.location);
@@ -223,49 +223,35 @@
 		</form>
 	</div>
 
-	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+	<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
 		{#each data.transit_cards as card (card.id)}
 			<a
 				href={`/card/${card.id}`}
-				class="group border-neutral-content/20 block overflow-hidden rounded-lg border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:scale-105"
+				class="group border-neutral-content/20 block overflow-hidden rounded-xl border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:-translate-y-3 lg:hover:scale-105"
 				in:receive={{ key: card.id }}
 				out:send={{ key: card.id }}
 			>
-				<!-- Transit Card Header -->
-				<div
-					class="bg-neutral-content/5 text-neutral-content/70 border-neutral-content/20 flex items-center justify-between border-b px-4 py-2 font-mono text-xs"
-				>
-					<span>CARD #{card.id.slice(-8)}</span>
+				<!-- Card Image with Transit-style Frame -->
+				<div class="bg-neutral-content/8 skeleton relative overflow-hidden rounded-xl">
+					<div
+						class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
+					>
+						<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
+					</div>
+					<img
+						src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+						alt={card.name}
+						class="aspect-[3.375/2.125] w-full object-cover"
+						loading="lazy"
+					/>
 				</div>
 
-				<div class="space-y-4 p-4">
-					<!-- Card Image with Transit-style Frame -->
-					<div class="bg-neutral-content/5 relative overflow-hidden rounded-xl">
-						<div
-							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
-						>
-							<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
-						</div>
-						<img
-							src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
-							alt={card.name}
-							class="aspect-[3.375/2.125] w-full object-cover"
-							loading="lazy"
-						/>
-					</div>
-
+				<div class="space-y-1 p-3">
 					<!-- Card Information -->
-					<div class="space-y-2">
-						<h3 class="font-display text-primary text-xl">{card.name}</h3>
-						<div class="bg-neutral-content/5 space-y-1 rounded p-2">
-							<div class="text-neutral-content/70 font-mono text-xs">ISSUING AGENCY</div>
-							<div class="text-neutral-content font-mono text-sm">{card.issuing_agency.name}</div>
-						</div>
-						<div class="bg-neutral-content/5 space-y-1 rounded p-2">
-							<div class="text-neutral-content/70 font-mono text-xs">LOCATION</div>
-							<div class="text-neutral-content font-mono text-sm">{card.issuing_agency.city}</div>
-						</div>
-					</div>
+					<h3 class="font-display text-primary text-md leading-5 font-bold">{card.name}</h3>
+					<p class="text-neutral-content font-mono text-xs leading-4">
+						{card.issuing_agency.name} ({card.issuing_agency.city})
+					</p>
 				</div>
 			</a>
 		{/each}
