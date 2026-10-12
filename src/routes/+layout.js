@@ -1,7 +1,7 @@
 import getDirectusInstance from '$lib/directus';
 import { readItems } from '@directus/sdk';
 
-export async function load({ fetch, url }) {
+export async function load({ fetch }) {
     const directus = getDirectusInstance(fetch);
     // Fetch total count of ALL transit cards (unfiltered)
     const totalAllCardsPromise = await directus.request(

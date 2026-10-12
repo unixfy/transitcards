@@ -66,6 +66,8 @@
 				<div class="bg-neutral-content/5 rounded-lg p-4">
 					<div class="text-neutral-content/70 mb-2 font-mono text-xs">ADDITIONAL NOTES</div>
 					<div class="prose prose-invert text-neutral-content max-w-none">
+						<!-- Notes come from our own Directus CMS and are trusted HTML -->
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 						{@html data.transit_card.notes}
 					</div>
 				</div>
