@@ -2,24 +2,12 @@
 	export let data;
 	import { crossfade } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
 
-	let currentTime = new Date().toLocaleTimeString();
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
-
-	onMount(() => {
-		const timer = setInterval(() => {
-			currentTime = new Date().toLocaleTimeString();
-		}, 1000);
-
-		return () => {
-			clearInterval(timer);
-		};
-	});
 
 	// Handle search form submission
 	async function handleSearch(e) {
@@ -51,7 +39,7 @@
 
 	const [send, receive] = crossfade({
 		duration: (d) => Math.sqrt(d * 200), // Adjust duration as needed
-		fallback(node, params) {
+		fallback(node) {
 			const style = getComputedStyle(node);
 			const transform = style.transform === 'none' ? '' : style.transform;
 
@@ -69,7 +57,7 @@
 
 <div class="flex flex-col gap-4 md:gap-6">
 	<!-- I'm feeling lucky button -->
-	<ImFeelingLuckyButton/>
+	<ImFeelingLuckyButton />
 
 	<!-- Search & Filter Section -->
 	<div class="w-full rounded-lg border bg-black/80 p-6">
@@ -220,7 +208,7 @@
 			{/if}
 
 			<!-- Page Number Buttons -->
-			{#each Array(data.totalPages) as _, i}
+			{#each Array(data.totalPages) as _, i (i)}
 				{@const pageNum = i + 1}
 				{#if pageNum === data.currentPage}
 					<button class="join-item btn lg:btn-xl btn-active">{pageNum}</button>

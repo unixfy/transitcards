@@ -15,7 +15,7 @@
 </script>
 
 <div
-	class="border-neutral-content/20 mx-auto overflow-hidden rounded-lg border bg-black/80 mb-4 md:mb-6"
+	class="border-neutral-content/20 mx-auto mb-4 overflow-hidden rounded-lg border bg-black/80 md:mb-6"
 >
 	<div class="items-start p-6 md:flex md:gap-6">
 		<!-- Card Image Section - Now constrained and alongside content -->
@@ -66,6 +66,8 @@
 				<div class="bg-neutral-content/5 rounded-lg p-4">
 					<div class="text-neutral-content/70 mb-2 font-mono text-xs">ADDITIONAL NOTES</div>
 					<div class="prose prose-invert text-neutral-content max-w-none">
+						<!-- Notes come from our own Directus CMS and are trusted HTML -->
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 						{@html data.transit_card.notes}
 					</div>
 				</div>
@@ -84,4 +86,4 @@
 	</div>
 </div>
 
-<ImFeelingLuckyButton/>
+<ImFeelingLuckyButton />
