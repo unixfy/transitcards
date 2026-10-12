@@ -3,10 +3,10 @@
 	import { crossfade } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { onMount, tick } from 'svelte';
-	import { goto, replaceState } from '$app/navigation';
+	import { afterNavigate, goto, replaceState } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import getDirectusInstance from '$lib/directus';
-	import { buildCardsFilter, fetchCardsPage } from '$lib/cards';
+	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
 
@@ -16,14 +16,13 @@
 	// Start loading the next page when the sentinel is this close to the bottom of the viewport
 	const LOAD_AHEAD_PX = 800;
 
-	// Infinite scroll state: `pages` is a contiguous, ascending range of loaded result pages
+	// Infinite scroll state: `pages` holds every loaded result page, starting from page 1
 	let pages = [];
 	let loadedFrom = null; // the `data` object `pages` was built from
 	let generation = 0; // bumped on every reset so stale in-flight fetches are discarded
 	let filterKey = '';
 	let urlPage = null; // page number currently shown in the address bar
 	let loadingMore = false;
-	let loadingEarlier = false;
 	let loadError = false;
 	let sentinel;
 
@@ -33,14 +32,18 @@
 		loadedFrom = data;
 		generation++;
 		filterKey = JSON.stringify([data.selectedAgency, data.searchQuery]);
-		pages = [{ pageNum: data.currentPage, cards: data.transit_cards }];
-		urlPage = data.currentPage;
-		loadingMore = loadingEarlier = loadError = false;
+		// load() returns pages 1 through currentPage together; split them back into pages
+		pages = [];
+		for (let pageNum = 1; pageNum <= data.currentPage; pageNum++) {
+			const start = (pageNum - 1) * CARDS_PER_PAGE;
+			pages.push({ pageNum, cards: data.transit_cards.slice(start, start + CARDS_PER_PAGE) });
+		}
+		// Read from the URL itself so an out-of-range ?page= gets corrected on the first scroll check
+		urlPage = Number(page.url.searchParams.get('page')) || 1;
+		loadingMore = loadError = false;
 	}
 
-	$: firstLoadedPage = pages[0].pageNum;
 	$: lastLoadedPage = pages[pages.length - 1].pageNum;
-	$: hasEarlier = firstLoadedPage > 1 && firstLoadedPage <= data.totalPages;
 	$: hasMore = lastLoadedPage < data.totalPages;
 	$: items = flattenPages(pages);
 
@@ -68,7 +71,7 @@
 
 	function fetchPage(pageNum) {
 		const filter = buildCardsFilter(data.selectedAgency, data.searchQuery || '');
-		return fetchCardsPage(getDirectusInstance(), pageNum, filter);
+		return fetchCardsPages(getDirectusInstance(), pageNum, filter);
 	}
 
 	async function loadMore() {
@@ -93,28 +96,6 @@
 		}
 	}
 
-	async function loadEarlier() {
-		if (loadingEarlier || !hasEarlier) return;
-		const gen = generation;
-		const pageNum = firstLoadedPage - 1;
-		loadingEarlier = true;
-		try {
-			const cards = await fetchPage(pageNum);
-			if (gen !== generation) return;
-			// Keep the cards already on screen in place while the earlier page is inserted above them
-			const anchor = document.querySelector(`[data-page-start="${firstLoadedPage}"]`);
-			const before = anchor?.getBoundingClientRect().top;
-			pages = [{ pageNum, cards }, ...pages];
-			loadingEarlier = false;
-			await tick();
-			if (anchor) window.scrollBy(0, anchor.getBoundingClientRect().top - before);
-		} catch (err) {
-			if (gen !== generation) return;
-			console.error('Failed to load earlier cards', err);
-			loadingEarlier = false;
-		}
-	}
-
 	function maybeLoadMore() {
 		if (!sentinel || loadError) return;
 		if (sentinel.getBoundingClientRect().top < window.innerHeight + LOAD_AHEAD_PX) loadMore();
@@ -124,7 +105,7 @@
 	// reloading or sharing the URL lands on the same spot
 	function updateUrlPage() {
 		if (navigating.type) return;
-		let visible = firstLoadedPage;
+		let visible = 1;
 		for (const el of document.querySelectorAll('[data-page-start]')) {
 			if (el.getBoundingClientRect().top > window.innerHeight / 3) break;
 			visible = Number(el.dataset.pageStart);
@@ -156,6 +137,14 @@
 		};
 	});
 
+	// Landing on ?page=N (a link, a typed URL or a fresh tab) starts the view at page N, with the
+	// earlier pages above it. Back/forward is left to the snapshot below, which runs afterwards.
+	afterNavigate(({ type }) => {
+		if (type === 'popstate' || data.currentPage <= 1) return;
+		const pageStart = document.querySelector(`[data-page-start="${data.currentPage}"]`);
+		if (pageStart) window.scrollTo(0, pageStart.getBoundingClientRect().top + window.scrollY - 16);
+	});
+
 	// When returning via the back button (or reloading), bring back every loaded page and the
 	// scroll position. SvelteKit restores scroll before snapshots, so scroll is re-applied here.
 	export const snapshot = {
@@ -164,7 +153,7 @@
 			if (!value || value.filterKey !== filterKey) return;
 			generation++;
 			pages = value.pages;
-			loadingMore = loadingEarlier = loadError = false;
+			loadingMore = loadError = false;
 			await tick();
 			window.scrollTo(0, value.scrollY);
 		}
@@ -316,21 +305,6 @@
 
 	<!-- Collection growth graph (follows the active filters) -->
 	<AcquisitionChart counts={data.acquisitionCounts} earliest={data.earliestAcquired} />
-
-	{#if hasEarlier}
-		<div class="flex justify-center">
-			<a
-				href={pageHref(firstLoadedPage - 1)}
-				class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 lg:btn-xl"
-				on:click|preventDefault={loadEarlier}
-			>
-				{#if loadingEarlier}
-					<span class="loading loading-spinner h-5 w-5"></span>
-				{/if}
-				Load earlier cards
-			</a>
-		</div>
-	{/if}
 
 	{#if items.length > 0}
 		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">

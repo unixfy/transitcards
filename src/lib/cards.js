@@ -31,12 +31,13 @@ export function buildCardsFilter(agencyFilter, searchQuery) {
 	return filters.length > 1 ? { _and: filters } : filters.length === 1 ? filters[0] : {};
 }
 
-// Fetch one page of transit cards; `id` is the final sort key so pages never overlap
-export function fetchCardsPage(directus, page, filter) {
+// Fetch `pageCount` consecutive pages of transit cards starting at `page`;
+// `id` is the final sort key so pages never overlap
+export function fetchCardsPages(directus, page, filter, pageCount = 1) {
 	return directus.request(
 		readItems('transit_cards', {
-			limit: CARDS_PER_PAGE,
-			page: page,
+			limit: CARDS_PER_PAGE * pageCount,
+			offset: (page - 1) * CARDS_PER_PAGE,
 			sort: ['-binder_page_number', '-date_acquired', 'name', 'id'],
 			fields: [
 				'id',

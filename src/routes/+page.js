@@ -1,6 +1,6 @@
 import getDirectusInstance from '$lib/directus';
 import { readItems } from '@directus/sdk';
-import { buildCardsFilter, fetchCardsPage, CARDS_PER_PAGE } from '$lib/cards';
+import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 
 export async function load({ fetch, url }) {
 	const directus = getDirectusInstance(fetch);
@@ -17,8 +17,9 @@ export async function load({ fetch, url }) {
 
 	const filter = buildCardsFilter(agencyFilter, searchQuery);
 
-	// Fetch transit cards for the current page with optional filters
-	const transitCardsPromise = fetchCardsPage(directus, currentPage, filter);
+	// Fetch every page up to and including the current one, so landing on ?page=N shows
+	// the earlier pages above it, as if the user had scrolled down to it
+	const transitCardsPromise = fetchCardsPages(directus, 1, filter, currentPage);
 
 	// Fetch total count of transit cards with filters applied
 	const totalResultCardsCountPromise = directus.request(
@@ -84,6 +85,8 @@ export async function load({ fetch, url }) {
 
 	const totalCount = totalResultCardsDataAgg[0]?.count?.id || 0;
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / limit) : 0;
+	// A page past the end shows the last page instead
+	currentPage = Math.min(currentPage, Math.max(totalPages, 1));
 
     return {
         transit_cards: transit_cards,
