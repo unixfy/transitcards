@@ -4,6 +4,7 @@
 	import { quintOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
+	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
 
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
@@ -151,6 +152,9 @@
 			{/if}
 		</form>
 	</div>
+
+	<!-- Collection growth graph (follows the active filters) -->
+	<AcquisitionChart counts={data.acquisitionCounts} earliest={data.earliestAcquired} />
 
 	{#if data.totalPages >= 1}
 		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
