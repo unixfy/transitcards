@@ -11,7 +11,6 @@
 	{:else}
 		<title>Alex's Transit Cards</title>
 	{/if}
-	<title>Alex's Transit Cards</title>
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
