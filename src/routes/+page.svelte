@@ -56,7 +56,7 @@
 
 <div class="flex flex-col gap-4 md:gap-6">
 	<!-- I'm feeling lucky button -->
-	<ImFeelingLuckyButton/>
+	<ImFeelingLuckyButton />
 
 	<!-- Search & Filter Section -->
 	<div class="w-full rounded-lg border bg-black/80 p-6">

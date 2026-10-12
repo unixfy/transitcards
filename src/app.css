@@ -8,13 +8,13 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 
 @theme {
-    --font-sans: 'IBM Plex Sans', sans-serif;
-    --font-display: 'Space Grotesk', monospace;
-    --font-mono: 'IBM Plex Mono', monospace;
+	--font-sans: 'IBM Plex Sans', sans-serif;
+	--font-display: 'Space Grotesk', monospace;
+	--font-mono: 'IBM Plex Mono', monospace;
 }
 
 @plugin 'daisyui' {
-    themes: emerald --default;
+	themes: emerald --default;
 }
 
 @custom-variant hover (&:hover);

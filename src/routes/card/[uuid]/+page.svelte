@@ -15,7 +15,7 @@
 </script>
 
 <div
-	class="border-neutral-content/20 mx-auto overflow-hidden rounded-lg border bg-black/80 mb-4 md:mb-6"
+	class="border-neutral-content/20 mx-auto mb-4 overflow-hidden rounded-lg border bg-black/80 md:mb-6"
 >
 	<div class="items-start p-6 md:flex md:gap-6">
 		<!-- Card Image Section - Now constrained and alongside content -->
@@ -86,4 +86,4 @@
 	</div>
 </div>
 
-<ImFeelingLuckyButton/>
+<ImFeelingLuckyButton />
