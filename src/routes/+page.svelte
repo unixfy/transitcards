@@ -2,12 +2,162 @@
 	export let data;
 	import { crossfade } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
-	import { goto } from '$app/navigation';
+	import { onMount, tick } from 'svelte';
+	import { afterNavigate, goto, replaceState } from '$app/navigation';
+	import { navigating, page } from '$app/state';
+	import getDirectusInstance from '$lib/directus';
+	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
 
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
+
+	// Start loading the next page when the sentinel is this close to the bottom of the viewport
+	const LOAD_AHEAD_PX = 800;
+
+	// Infinite scroll state: `pages` holds every loaded result page, starting from page 1
+	let pages = [];
+	let loadedFrom = null; // the `data` object `pages` was built from
+	let generation = 0; // bumped on every reset so stale in-flight fetches are discarded
+	let filterKey = '';
+	let urlPage = null; // page number currently shown in the address bar
+	let loadingMore = false;
+	let loadError = false;
+	let sentinel;
+
+	// Start over whenever load() returns new data (a fresh navigation or a filter change)
+	$: if (data !== loadedFrom) {
+		// eslint-disable-next-line no-useless-assignment -- read by this reactive block on the next update
+		loadedFrom = data;
+		generation++;
+		filterKey = JSON.stringify([data.selectedAgency, data.searchQuery]);
+		// load() returns pages 1 through currentPage together; split them back into pages
+		pages = [];
+		for (let pageNum = 1; pageNum <= data.currentPage; pageNum++) {
+			const start = (pageNum - 1) * CARDS_PER_PAGE;
+			pages.push({ pageNum, cards: data.transit_cards.slice(start, start + CARDS_PER_PAGE) });
+		}
+		// Read from the URL itself so an out-of-range ?page= gets corrected on the first scroll check
+		urlPage = Number(page.url.searchParams.get('page')) || 1;
+		loadingMore = loadError = false;
+	}
+
+	$: lastLoadedPage = pages[pages.length - 1].pageNum;
+	$: hasMore = lastLoadedPage < data.totalPages;
+	$: items = flattenPages(pages);
+
+	// Flatten loaded pages into one list, marking the first card of each page and skipping duplicates
+	function flattenPages(pages) {
+		const seen = {};
+		const result = [];
+		for (const { pageNum, cards } of pages) {
+			let pageStart = pageNum;
+			for (const card of cards) {
+				if (seen[card.id]) continue;
+				seen[card.id] = true;
+				result.push({ card, pageStart });
+				pageStart = null;
+			}
+		}
+		return result;
+	}
+
+	function pageHref(pageNum) {
+		return `?page=${pageNum}${data.selectedAgency ? `&agency=${data.selectedAgency}` : ''}${
+			data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''
+		}`;
+	}
+
+	function fetchPage(pageNum) {
+		const filter = buildCardsFilter(data.selectedAgency, data.searchQuery || '');
+		return fetchCardsPages(getDirectusInstance(), pageNum, filter);
+	}
+
+	async function loadMore() {
+		if (loadingMore || !hasMore) return;
+		const gen = generation;
+		const pageNum = lastLoadedPage + 1;
+		loadingMore = true;
+		loadError = false;
+		try {
+			const cards = await fetchPage(pageNum);
+			if (gen !== generation) return;
+			pages = [...pages, { pageNum, cards }];
+			loadingMore = false;
+			// Keep going if the new cards didn't fill the viewport
+			await tick();
+			maybeLoadMore();
+		} catch (err) {
+			if (gen !== generation) return;
+			console.error('Failed to load more cards', err);
+			loadingMore = false;
+			loadError = true;
+		}
+	}
+
+	function maybeLoadMore() {
+		if (!sentinel || loadError) return;
+		if (sentinel.getBoundingClientRect().top < window.innerHeight + LOAD_AHEAD_PX) loadMore();
+	}
+
+	// Keep `?page=` in the address bar in sync with the page of cards being viewed, so that
+	// reloading or sharing the URL lands on the same spot
+	function updateUrlPage() {
+		if (navigating.type) return;
+		let visible = 1;
+		for (const el of document.querySelectorAll('[data-page-start]')) {
+			if (el.getBoundingClientRect().top > window.innerHeight / 3) break;
+			visible = Number(el.dataset.pageStart);
+		}
+		if (visible === urlPage) return;
+		urlPage = visible;
+		const url = new URL(window.location.href);
+		url.searchParams.set('page', String(visible));
+		replaceState(url, page.state);
+	}
+
+	onMount(() => {
+		let frame = null;
+		const onScroll = () => {
+			if (frame !== null) return;
+			frame = requestAnimationFrame(() => {
+				frame = null;
+				updateUrlPage();
+				maybeLoadMore();
+			});
+		};
+		addEventListener('scroll', onScroll, { passive: true });
+		addEventListener('resize', onScroll);
+		onScroll();
+		return () => {
+			removeEventListener('scroll', onScroll);
+			removeEventListener('resize', onScroll);
+			if (frame !== null) cancelAnimationFrame(frame);
+		};
+	});
+
+	// Landing on ?page=N (a link, a typed URL or a fresh tab) starts the view at page N, with the
+	// earlier pages above it. Back/forward is left to the snapshot below, which runs afterwards.
+	afterNavigate(({ type }) => {
+		if (type === 'popstate' || data.currentPage <= 1) return;
+		const pageStart = document.querySelector(`[data-page-start="${data.currentPage}"]`);
+		if (pageStart) window.scrollTo(0, pageStart.getBoundingClientRect().top + window.scrollY - 16);
+	});
+
+	// When returning via the back button (or reloading), bring back every loaded page and the
+	// scroll position. SvelteKit restores scroll before snapshots, so scroll is re-applied here.
+	export const snapshot = {
+		capture: () => ({ filterKey, pages, scrollY: window.scrollY }),
+		restore: async (value) => {
+			if (!value || value.filterKey !== filterKey) return;
+			generation++;
+			pages = value.pages;
+			loadingMore = loadError = false;
+			await tick();
+			window.scrollTo(0, value.scrollY);
+		}
+	};
 
 	// Handle search form submission
 	async function handleSearch(e) {
@@ -156,11 +306,12 @@
 	<!-- Collection growth graph (follows the active filters) -->
 	<AcquisitionChart counts={data.acquisitionCounts} earliest={data.earliestAcquired} />
 
-	{#if data.totalPages >= 1}
+	{#if items.length > 0}
 		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
-			{#each data.transit_cards as card (card.id)}
+			{#each items as { card, pageStart } (card.id)}
 				<a
 					href={`/card/${card.id}`}
+					data-page-start={pageStart}
 					class="group border-neutral-content/20 block overflow-hidden rounded-xl border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:-translate-y-3 lg:hover:scale-105"
 					in:receive={{ key: card.id }}
 					out:send={{ key: card.id }}
@@ -192,51 +343,26 @@
 		</div>
 	{/if}
 
-	<!-- Pagination Controls -->
-	{#if data.totalPages > 1}
-		<div class="join mt-8 flex justify-center">
-			<!-- Previous Button -->
-			{#if data.currentPage > 1}
-				<a
-					href="?page={data.currentPage - 1}{data.selectedAgency
-						? `&agency=${data.selectedAgency}`
-						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-					class="join-item btn lg:btn-xl">« Prev</a
-				>
-			{:else}
-				<button class="join-item btn btn-disabled lg:btn-xl">« Prev</button>
-			{/if}
-
-			<!-- Page Number Buttons -->
-			{#each Array(data.totalPages) as _, i (i)}
-				{@const pageNum = i + 1}
-				{#if pageNum === data.currentPage}
-					<button class="join-item btn lg:btn-xl btn-active">{pageNum}</button>
-				{:else if pageNum === 1 || pageNum === data.totalPages || (pageNum >= data.currentPage - 2 && pageNum <= data.currentPage + 2)}
-					<a
-						href="?page={pageNum}{data.selectedAgency
-							? `&agency=${data.selectedAgency}`
-							: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-						class="join-item btn lg:btn-xl">{pageNum}</a
-					>
-				{:else if (pageNum === data.currentPage - 3 && pageNum > 1 && data.currentPage - 3 !== 1) || (pageNum === data.currentPage + 3 && pageNum < data.totalPages && data.currentPage + 3 !== data.totalPages)}
-					<button class="join-item btn lg:btn-xl btn-disabled">...</button>
+	<!-- Infinite scroll sentinel: loads the next page as it nears the viewport, and works as a plain link without JS -->
+	{#if hasMore}
+		<div class="mt-8 flex justify-center">
+			<a
+				bind:this={sentinel}
+				href={pageHref(lastLoadedPage + 1)}
+				class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 lg:btn-xl"
+				on:click|preventDefault={loadMore}
+			>
+				{#if loadingMore}
+					<span class="loading loading-spinner h-5 w-5"></span>
+					Loading…
+				{:else if loadError}
+					Couldn't load more cards. Retry
+				{:else}
+					Load more cards
 				{/if}
-			{/each}
-
-			<!-- Next Button -->
-			{#if data.currentPage < data.totalPages}
-				<a
-					href="?page={data.currentPage + 1}{data.selectedAgency
-						? `&agency=${data.selectedAgency}`
-						: ''}{data.searchQuery ? `&search=${encodeURIComponent(data.searchQuery)}` : ''}"
-					class="join-item btn lg:btn-xl">Next »</a
-				>
-			{:else}
-				<button class="join-item btn btn-disabled lg:btn-xl">Next »</button>
-			{/if}
+			</a>
 		</div>
-	{:else if data.transit_cards.length === 0}
+	{:else if items.length === 0}
 		<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-6 text-center">
 			<p class="text-neutral-content/70 font-mono text-lg">
 				Oops! No cards found. Try adjusting your search or filters.

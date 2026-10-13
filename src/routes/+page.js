@@ -1,9 +1,10 @@
 import getDirectusInstance from '$lib/directus';
 import { readItems } from '@directus/sdk';
+import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 
 export async function load({ fetch, url }) {
 	const directus = getDirectusInstance(fetch);
-	const limit = 50; // Results per page
+	const limit = CARDS_PER_PAGE; // Results per page
 
 	const pageParam = url.searchParams.get('page');
 	const agencyFilter = url.searchParams.get('agency');
@@ -14,52 +15,11 @@ export async function load({ fetch, url }) {
 		currentPage = 1;
 	}
 
-	// Build filter object for server-side filtering
-	const filters = [];
+	const filter = buildCardsFilter(agencyFilter, searchQuery);
 
-	if (agencyFilter) {
-		filters.push({
-			issuing_agency: {
-				id: { _eq: agencyFilter }
-			}
-		});
-	}
-
-	// Add server-side full-text search using OR logic across multiple fields
-	// This is a workaround because Directus does not support full-text search natively
-	if (searchQuery.trim()) {
-		filters.push({
-			_or: [
-				{ name: { _icontains: searchQuery } },
-				{ issuing_agency: { name: { _icontains: searchQuery } } },
-				{ issuing_agency: { city: { _icontains: searchQuery } } },
-				{ notes: { _icontains: searchQuery } }
-			]
-		});
-	}
-
-	// Combine filters with AND logic if both exist
-	const filter = filters.length > 1 ? { _and: filters } : filters.length === 1 ? filters[0] : {};
-
-	// Fetch transit cards for the current page with optional filters
-	const transitCardsPromise = directus.request(
-		readItems('transit_cards', {
-			limit: limit,
-			page: currentPage,
-			sort: ['-binder_page_number', '-date_acquired', 'name'],
-			fields: [
-				'id',
-				'name',
-				'date_acquired',
-				'image',
-				'issuing_agency.id',
-				'issuing_agency.name',
-				'issuing_agency.city',
-				'notes'
-			],
-			...(Object.keys(filter).length > 0 && { filter })
-		})
-	);
+	// Fetch every page up to and including the current one, so landing on ?page=N shows
+	// the earlier pages above it, as if the user had scrolled down to it
+	const transitCardsPromise = fetchCardsPages(directus, 1, filter, currentPage);
 
 	// Fetch total count of transit cards with filters applied
 	const totalResultCardsCountPromise = directus.request(
@@ -125,6 +85,8 @@ export async function load({ fetch, url }) {
 
 	const totalCount = totalResultCardsDataAgg[0]?.count?.id || 0;
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / limit) : 0;
+	// A page past the end shows the last page instead
+	currentPage = Math.min(currentPage, Math.max(totalPages, 1));
 
     return {
         transit_cards: transit_cards,
