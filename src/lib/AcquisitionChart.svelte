@@ -118,7 +118,7 @@
 <div class="collapse-arrow border-neutral-content/20 collapse rounded-lg border bg-black/80">
 	<input type="checkbox" bind:checked={open} aria-label="Toggle collection growth graph" />
 	<div class="collapse-title flex flex-wrap items-center gap-3 font-mono text-white uppercase">
-		Collection Growth
+		Cards Over Time
 		<span class="badge badge-primary badge-outline font-mono">
 			{totalCount} card{totalCount === 1 ? '' : 's'}
 		</span>
