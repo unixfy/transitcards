@@ -1,8 +1,8 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
-	import { getPalette, setWash, clearWash, setHeroId } from '$lib/palette';
+	import { getPalette, peekPalette, setWash, setHeroId, NEUTRAL } from '$lib/palette';
 
 	let { data } = $props();
 
@@ -10,14 +10,22 @@
 	let stage = $state();
 	let tilt = $state();
 
-	// The page ground takes on this card's colors, and the photo is named so the grid tile morphs into it
+	// The page ground takes on this card's colors. When the grid has already worked them out they
+	// apply before the first paint; otherwise the page stays tint-free until they arrive, so the
+	// default colors never flash.
+	const known = peekPalette(card.image);
+	setWash(known ?? NEUTRAL, true);
+	let ready = $state(!!known);
 	$effect(() => {
 		setHeroId(card.id);
 		let current = true;
-		getPalette(card.image).then((palette) => current && setWash(palette));
+		getPalette(card.image).then((palette) => {
+			if (!current) return;
+			setWash(palette);
+			ready = true;
+		});
 		return () => (current = false);
 	});
-	onDestroy(() => typeof document !== 'undefined' && clearWash());
 
 	const MAX_TILT = 14; // degrees
 
@@ -101,10 +109,13 @@
 <div class="-mx-3 overflow-x-clip px-3 md:-mx-4 md:px-4">
 	<div class="lg:flex lg:items-start lg:gap-12">
 		<!-- The card, front and centre -->
-		<section
-			class="px-1 py-6 lg:sticky lg:top-6 lg:w-[58%] lg:flex-shrink-0 lg:py-4"
-			style="background: radial-gradient(70% 75% at 45% 52%, color-mix(in oklab, var(--wash-1) 38%, transparent), transparent 72%), radial-gradient(40% 45% at 82% 70%, color-mix(in oklab, var(--wash-2) 28%, transparent), transparent 62%);"
-		>
+		<section class="relative px-1 py-6 lg:sticky lg:top-6 lg:w-[58%] lg:flex-shrink-0 lg:py-4">
+			<div
+				class="reveal pointer-events-none absolute inset-0"
+				class:ready
+				style="background: radial-gradient(70% 75% at 45% 52%, color-mix(in oklab, var(--wash-1) 38%, transparent), transparent 72%), radial-gradient(40% 45% at 82% 70%, color-mix(in oklab, var(--wash-2) 28%, transparent), transparent 62%);"
+				aria-hidden="true"
+			></div>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				bind:this={stage}
@@ -142,7 +153,8 @@
 				{card.name}
 			</h1>
 			<div
-				class="mt-3 h-1.5 w-28 rounded-full"
+				class="reveal mt-3 h-1.5 w-28 rounded-full"
+				class:ready
 				style="background: linear-gradient(90deg, var(--wash-1), var(--wash-2));"
 				aria-hidden="true"
 			></div>
@@ -189,6 +201,19 @@
 </div>
 
 <style>
+	/* Pieces tinted by the card's colors wait for them, then fade in together with the page ground */
+	.reveal {
+		opacity: 0;
+		transition: opacity 0.9s ease;
+	}
+	.reveal.ready {
+		opacity: 1;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.reveal {
+			transition: none;
+		}
+	}
 	.tilt {
 		--rx: 0deg;
 		--ry: 0deg;

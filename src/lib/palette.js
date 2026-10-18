@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { browser } from '$app/environment';
 
 // Pulls two vivid colors out of a card's photo so the page around it can wear them.
 // The CMS echoes the requesting origin in its CORS headers, which lets a canvas read the pixels;
@@ -6,8 +7,12 @@ import { writable } from 'svelte/store';
 
 const SIZE = 32;
 const cache = new Map();
+const resolved = new Map();
 
 export const FALLBACK = { c1: 'hsl(153 70% 42%)', c2: 'hsl(221 80% 52%)' };
+
+// No tint at all: what a card page shows until its own colors are known
+export const NEUTRAL = { c1: 'transparent', c2: 'transparent' };
 
 export const assetUrl = (image, width) =>
 	`https://cms.alexwang.net/assets/${image}?format=webp&width=${width}`;
@@ -67,7 +72,11 @@ export function getPalette(image) {
 	if (!cache.has(image)) {
 		cache.set(
 			image,
-			new Promise((resolve) => {
+			new Promise((done) => {
+				const resolve = (palette) => {
+					resolved.set(image, palette);
+					done(palette);
+				};
 				const img = new Image();
 				img.crossOrigin = 'anonymous';
 				img.onload = () => {
@@ -93,18 +102,16 @@ export function getPalette(image) {
 // The page ground picks up the colors of whichever card is in focus
 export const wash = writable(FALLBACK);
 
-export function setWash(palette) {
+// A palette that is already known, available without waiting
+export const peekPalette = (image) => resolved.get(image);
+
+// `instant` swaps the ground without the slow crossfade (used when arriving on a card page)
+export function setWash(palette, instant = false) {
+	if (!browser) return;
 	const root = document.documentElement.style;
 	root.setProperty('--wash-1', palette?.c1 ?? FALLBACK.c1);
 	root.setProperty('--wash-2', palette?.c2 ?? FALLBACK.c2);
-	wash.set(palette ?? FALLBACK);
-}
-
-export function clearWash() {
-	const root = document.documentElement.style;
-	root.removeProperty('--wash-1');
-	root.removeProperty('--wash-2');
-	wash.set(FALLBACK);
+	wash.set({ ...(palette ?? FALLBACK), instant });
 }
 
 // Which card's photo is currently named for the view transition between grid and detail

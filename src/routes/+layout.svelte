@@ -41,6 +41,11 @@
 </script>
 
 <svelte:head>
+	{#if $page.route.id === '/card/[uuid]'}
+		<!-- Card pages start tint-free so there is no flash of the default colors -->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+		{@html '<style>html:root{--wash-1:transparent;--wash-2:transparent}</style>'}
+	{/if}
 	{#if $page.data.title}
 		<title>{$page.data.title} | Alex's Transit Cards</title>
 	{:else}
@@ -54,13 +59,10 @@
 	{@render children()}
 {:else}
 	<div class="site-bg">
-		<Wash />
+		<Wash neutral={$page.route.id === '/card/[uuid]'} />
 		<div class="container mx-auto px-3 py-3 md:px-4 md:py-8">
 			<!-- Jumbotron -->
-			<header
-				class="card card-border mb-3 overflow-hidden md:mb-6"
-				style="background: linear-gradient(120deg, color-mix(in oklab, var(--wash-1) 16%, var(--color-base-100)), color-mix(in oklab, var(--wash-2) 14%, var(--color-base-100)));"
-			>
+			<header class="card card-border bg-base-100 mb-3 overflow-hidden md:mb-6">
 				<div class="card-body flex-row items-center justify-between gap-3 p-4 md:items-end md:p-8">
 					<div>
 						<a href="/" class="block">

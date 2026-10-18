@@ -1,12 +1,13 @@
 <script>
-	import { wash } from './palette';
+	import { wash, FALLBACK, NEUTRAL } from './palette';
 
 	// Two fixed layers swap in turn; fading opacity stays on the compositor, so a color change
 	// never restyles or repaints the page.
-	let layers = $state([
-		{ c1: 'hsl(153 70% 42%)', c2: 'hsl(221 80% 52%)' },
-		{ c1: 'hsl(153 70% 42%)', c2: 'hsl(221 80% 52%)' }
-	]);
+	// `neutral` is for card pages, which load tint-free and then take on the card's own colors
+	let { neutral = false } = $props();
+	const start = neutral ? NEUTRAL : FALLBACK;
+	let layers = $state([{ ...start }, { ...start }]);
+	let instant = $state(false);
 	let front = $state(0);
 	let current = null;
 
@@ -17,13 +18,24 @@
 			layers[back] = palette;
 			front = back;
 			current = palette;
+			if (palette.instant) {
+				// Skip the fade for this one swap, then restore it
+				instant = true;
+				requestAnimationFrame(() => requestAnimationFrame(() => (instant = false)));
+			}
 		});
 		return unsubscribe;
 	});
 </script>
 
 {#each layers as layer, i (i)}
-	<div class="layer" class:on={front === i} style:--a={layer.c1} style:--b={layer.c2}></div>
+	<div
+		class="layer"
+		class:on={front === i}
+		class:instant
+		style:--a={layer.c1}
+		style:--b={layer.c2}
+	></div>
 {/each}
 
 <style>
@@ -33,7 +45,7 @@
 		z-index: -1;
 		pointer-events: none;
 		opacity: 0;
-		transition: opacity 1.2s ease;
+		transition: opacity 0.9s ease;
 		will-change: opacity;
 		background:
 			radial-gradient(
@@ -51,6 +63,10 @@
 				color-mix(in oklab, var(--a) 14%, transparent),
 				transparent 70%
 			);
+	}
+
+	.layer.instant {
+		transition: none;
 	}
 
 	.layer.on {
