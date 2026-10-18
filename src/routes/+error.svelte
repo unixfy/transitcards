@@ -68,7 +68,6 @@
 			<div class="mt-8 flex flex-col gap-3 sm:flex-row">
 				<a
 					href="/"
-					data-sveltekit-reload
 					class="btn btn-lg font-display border-0 text-white shadow-sm hover:brightness-110"
 					style="background: var(--brand-solid);"
 				>
