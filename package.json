@@ -7,6 +7,9 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"prepare": "svelte-kit sync || echo ''",
 		"lint": "eslint . && prettier --check .",
 		"format": "prettier --write ."
@@ -22,6 +25,10 @@
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/vite": "^4.3.3",
+		"@testing-library/jest-dom": "^7.0.1",
+		"@testing-library/svelte": "^5.4.2",
+		"@testing-library/user-event": "^14.6.8",
+		"@vitest/coverage-v8": "^5.0.5",
 		"d3-array": "^3.2.4",
 		"d3-scale": "^4.0.2",
 		"d3-shape": "^3.2.0",
@@ -31,11 +38,13 @@
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.23.0",
 		"globals": "^17.12.0",
+		"jsdom": "^30.1.3",
 		"prettier": "^3.9.9",
 		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"svelte": "^5.57.1",
 		"tailwindcss": "^4.3.2",
-		"vite": "^8.3.1"
+		"vite": "^8.3.1",
+		"vitest": "^5.0.5"
 	}
 }
