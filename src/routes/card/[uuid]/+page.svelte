@@ -1,15 +1,33 @@
 <script>
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { afterNavigate, goto } from '$app/navigation';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
+	import { takeCollection } from '$lib/collectionReturn';
 
 	export let data;
 
-	// Function to handle navigation
+	// Set when the previous history entry is the collection, so going back restores its query
+	// params, loaded pages and scroll position
+	let cameFromCollection = false;
+	// Collection URL handed over by the "I'm Feeling Lucky" button, which leaves the page with a
+	// full navigation
+	let collectionUrl = null;
+
+	afterNavigate(({ from }) => {
+		cameFromCollection = from?.url.pathname === '/';
+		if (cameFromCollection) collectionUrl = from.url.pathname + from.url.search;
+	});
+
+	onMount(() => {
+		collectionUrl ??= takeCollection();
+	});
+
+	// Return to the collection if the visitor came from it, otherwise straight to the homepage
 	function handleNavigation() {
-		if (window.history.length > 2) {
+		if (cameFromCollection) {
 			history.back();
 		} else {
-			goto('/');
+			goto(collectionUrl ?? '/');
 		}
 	}
 </script>
@@ -86,4 +104,4 @@
 	</div>
 </div>
 
-<ImFeelingLuckyButton />
+<ImFeelingLuckyButton returnTo={collectionUrl} />

@@ -39,65 +39,70 @@ export async function load({ fetch, url }) {
 		})
 	);
 
-    // Directus date functions return acquisition dates as year/month/day parts, so the
-    // collection graph never has to parse date strings (which can shift across time zones)
-    const dateParts = ['year(date_acquired)', 'month(date_acquired)', 'day(date_acquired)'];
-    const toDateParts = (row) =>
-        row.date_acquired_year
-            ? [row.date_acquired_year, row.date_acquired_month, row.date_acquired_day].map(Number)
-            : null;
+	// Directus date functions return acquisition dates as year/month/day parts, so the
+	// collection graph never has to parse date strings (which can shift across time zones)
+	const dateParts = ['year(date_acquired)', 'month(date_acquired)', 'day(date_acquired)'];
+	const toDateParts = (row) =>
+		row.date_acquired_year
+			? [row.date_acquired_year, row.date_acquired_month, row.date_acquired_day].map(Number)
+			: null;
 
-    // Fetch card counts grouped by acquisition date (with filters applied) for the collection graph
-    const acquisitionCountsPromise = directus.request(
-        readItems('transit_cards', {
-            limit: -1,
-            aggregate: { count: ['id'] },
-            groupBy: dateParts,
-            ...(Object.keys(filter).length > 0 && { filter })
-        })
-    );
+	// Fetch card counts grouped by acquisition date (with filters applied) for the collection graph
+	const acquisitionCountsPromise = directus.request(
+		readItems('transit_cards', {
+			limit: -1,
+			aggregate: { count: ['id'] },
+			groupBy: dateParts,
+			...(Object.keys(filter).length > 0 && { filter })
+		})
+	);
 
-    // Fetch the earliest acquisition date across the whole collection (no filters);
-    // cards without an acquired date are assumed to have been acquired on this date
-    const earliestAcquiredPromise = directus.request(
-        readItems('transit_cards', {
-            fields: dateParts,
-            sort: ['date_acquired'],
-            filter: { date_acquired: { _nnull: true } },
-            limit: 1
-        })
-    );
+	// Fetch the earliest acquisition date across the whole collection (no filters);
+	// cards without an acquired date are assumed to have been acquired on this date
+	const earliestAcquiredPromise = directus.request(
+		readItems('transit_cards', {
+			fields: dateParts,
+			sort: ['date_acquired'],
+			filter: { date_acquired: { _nnull: true } },
+			limit: 1
+		})
+	);
 
-    const [transit_cards, totalResultCardsDataAgg, agencies, acquisitionCountsAgg, earliestAcquiredRows] =
-        await Promise.all([
-            transitCardsPromise,
-            totalResultCardsCountPromise,
-            agenciesPromise,
-            acquisitionCountsPromise,
-            earliestAcquiredPromise
-        ]);
+	const [
+		transit_cards,
+		totalResultCardsDataAgg,
+		agencies,
+		acquisitionCountsAgg,
+		earliestAcquiredRows
+	] = await Promise.all([
+		transitCardsPromise,
+		totalResultCardsCountPromise,
+		agenciesPromise,
+		acquisitionCountsPromise,
+		earliestAcquiredPromise
+	]);
 
-    const acquisitionCounts = acquisitionCountsAgg.map((row) => ({
-        date: toDateParts(row),
-        count: Number(row.count?.id) || 0
-    }));
-    const earliestAcquired = earliestAcquiredRows[0] ? toDateParts(earliestAcquiredRows[0]) : null;
+	const acquisitionCounts = acquisitionCountsAgg.map((row) => ({
+		date: toDateParts(row),
+		count: Number(row.count?.id) || 0
+	}));
+	const earliestAcquired = earliestAcquiredRows[0] ? toDateParts(earliestAcquiredRows[0]) : null;
 
 	const totalCount = totalResultCardsDataAgg[0]?.count?.id || 0;
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / limit) : 0;
 	// A page past the end shows the last page instead
 	currentPage = Math.min(currentPage, Math.max(totalPages, 1));
 
-    return {
-        transit_cards: transit_cards,
-        agencies: agencies,
-        currentPage: currentPage,
-        totalPages: totalPages,
-        totalCount: totalCount,
-        selectedAgency: agencyFilter || null,
-        searchQuery: searchQuery,
-        acquisitionCounts: acquisitionCounts,
-        earliestAcquired: earliestAcquired,
-        title: "Home"
-    };
+	return {
+		transit_cards: transit_cards,
+		agencies: agencies,
+		currentPage: currentPage,
+		totalPages: totalPages,
+		totalCount: totalCount,
+		selectedAgency: agencyFilter || null,
+		searchQuery: searchQuery,
+		acquisitionCounts: acquisitionCounts,
+		earliestAcquired: earliestAcquired,
+		title: 'Home'
+	};
 }

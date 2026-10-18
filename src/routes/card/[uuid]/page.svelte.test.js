@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import { tick } from 'svelte';
 
 const goto = vi.fn();
-vi.mock('$app/navigation', () => ({ goto: (...args) => goto(...args) }));
+const navCallbacks = [];
+vi.mock('$app/navigation', () => ({
+	goto: (...args) => goto(...args),
+	afterNavigate: (cb) => navCallbacks.push(cb)
+}));
 
 import CardPage from './+page.svelte';
 
@@ -16,13 +21,18 @@ const card = (overrides = {}) => ({
 	...overrides
 });
 
-function setHistoryLength(length) {
-	Object.defineProperty(window.history, 'length', { configurable: true, value: length });
+// Simulate SvelteKit reporting where the visitor navigated from (null = direct visit / reload)
+async function navigatedFrom(href) {
+	const from = href ? { url: new URL(href, 'http://localhost') } : null;
+	navCallbacks.forEach((cb) => cb({ from }));
+	await tick();
 }
 
 describe('card detail page', () => {
 	beforeEach(() => {
 		goto.mockReset();
+		navCallbacks.length = 0;
+		sessionStorage.clear();
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
@@ -73,22 +83,60 @@ describe('card detail page', () => {
 	});
 
 	describe('Return to Collection', () => {
-		it('goes back in history when there is a previous page', async () => {
-			setHistoryLength(5);
+		const clickReturn = () =>
+			fireEvent.click(screen.getByRole('button', { name: /return to collection/i }));
+
+		it('goes back in history when the visitor clicked through from the collection', async () => {
 			const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
 			render(CardPage, { data: { transit_card: card() } });
-			await fireEvent.click(screen.getByRole('button', { name: /return to collection/i }));
+			await navigatedFrom('/?page=3&agency=a1');
+			await clickReturn();
 			expect(back).toHaveBeenCalledTimes(1);
 			expect(goto).not.toHaveBeenCalled();
 		});
 
-		it('goes home when the card was opened directly (short history)', async () => {
-			setHistoryLength(2);
+		it('goes straight home when opened directly, however long the history is', async () => {
+			// A new-tab page or earlier sites inflate history.length; it must not matter
+			Object.defineProperty(window.history, 'length', { configurable: true, value: 9 });
 			const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
 			render(CardPage, { data: { transit_card: card() } });
-			await fireEvent.click(screen.getByRole('button', { name: /return to collection/i }));
+			await navigatedFrom(null);
+			await clickReturn();
 			expect(goto).toHaveBeenCalledWith('/');
 			expect(back).not.toHaveBeenCalled();
+		});
+
+		it('goes home when the visitor came from another internal page', async () => {
+			const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+			render(CardPage, { data: { transit_card: card() } });
+			await navigatedFrom('/slideshow');
+			await clickReturn();
+			expect(goto).toHaveBeenCalledWith('/');
+			expect(back).not.toHaveBeenCalled();
+		});
+
+		it('returns to the collection URL (with params) handed over by the lucky button', async () => {
+			sessionStorage.setItem('collectionUrl', '/?page=4&search=bart');
+			const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+			render(CardPage, { data: { transit_card: card() } });
+			await navigatedFrom(null);
+			await clickReturn();
+			expect(goto).toHaveBeenCalledWith('/?page=4&search=bart');
+			expect(back).not.toHaveBeenCalled();
+		});
+
+		it('consumes the handed-over URL so it cannot go stale', () => {
+			sessionStorage.setItem('collectionUrl', '/?page=4');
+			render(CardPage, { data: { transit_card: card() } });
+			expect(sessionStorage.getItem('collectionUrl')).toBeNull();
+		});
+
+		it('passes the collection URL on when picking another random card', async () => {
+			render(CardPage, { data: { transit_card: card() } });
+			await navigatedFrom('/?agency=a2&page=2');
+			await fireEvent.click(screen.getByRole('button', { name: /feeling lucky/i }));
+			expect(sessionStorage.getItem('collectionUrl')).toBe('/?agency=a2&page=2');
+			expect(goto).toHaveBeenCalledWith('/feeling-lucky');
 		});
 	});
 });
