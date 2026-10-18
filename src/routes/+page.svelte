@@ -9,7 +9,14 @@
 	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
-	import { getPalette, setWash, getHeroId, setHeroId } from '$lib/palette';
+	import {
+		getPalette,
+		setWash,
+		getHeroId,
+		setHeroId,
+		setHeroImage,
+		clearHeroNames
+	} from '$lib/palette';
 
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
@@ -150,14 +157,10 @@
 
 	// Name the tapped photo so the browser can morph it into the detail page
 	function heroOnClick(e, card) {
-		for (const el of document.querySelectorAll('[data-hero]')) {
-			el.style.viewTransitionName = '';
-			el.removeAttribute('data-hero');
-		}
-		const img = e.currentTarget.querySelector('img');
-		img.style.viewTransitionName = 'card-hero';
-		img.dataset.hero = '';
+		clearHeroNames();
+		e.currentTarget.querySelector('img').style.viewTransitionName = 'card-hero';
 		setHeroId(card.id);
+		setHeroImage(card.image);
 	}
 
 	// Card details are hidden unless the visitor opts in; the choice is remembered
