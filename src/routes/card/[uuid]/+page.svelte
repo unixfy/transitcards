@@ -30,22 +30,16 @@
 		}
 	}
 
-	// Tilt the card toward a point (0..1 across the card) and slide the foil and glare with it.
+	// Tilt the card toward a point (0..1 across the card).
 	// Writes are batched into one frame, and only transforms change, so it stays on the compositor.
 	let frame = 0;
 	function pose(nx, ny) {
 		if (frame) cancelAnimationFrame(frame);
 		frame = requestAnimationFrame(() => {
 			frame = 0;
-			const w = stage.clientWidth;
-			const h = stage.clientHeight;
 			const s = tilt.style;
 			s.setProperty('--ry', `${(nx - 0.5) * 2 * MAX_TILT}deg`);
 			s.setProperty('--rx', `${(0.5 - ny) * 2 * MAX_TILT}deg`);
-			s.setProperty('--fx', `${(0.5 - nx) * w * 0.9}px`);
-			s.setProperty('--fy', `${(0.5 - ny) * h * 0.5}px`);
-			s.setProperty('--gx', `${nx * w}px`);
-			s.setProperty('--gy', `${ny * h}px`);
 			tilt.dataset.active = 'true';
 		});
 	}
@@ -138,7 +132,6 @@
 						alt={card.name}
 						class="skeleton h-full w-full rounded-[3.5%/5.5%] object-cover"
 					/>
-					<div class="foil rounded-[3.5%/5.5%]" aria-hidden="true"><i></i><b></b></div>
 				</div>
 			</div>
 		</section>
@@ -203,11 +196,8 @@
 		transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 		will-change: transform;
 	}
-	.tilt[data-active='true'] {
+	:global(.tilt[data-active='true']) {
 		/* Follow the pointer closely while it is over the card */
 		transition: transform 0.08s linear;
-	}
-	.tilt[data-active='true'] .foil {
-		opacity: 1;
 	}
 </style>

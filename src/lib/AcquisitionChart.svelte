@@ -205,13 +205,13 @@
 							{/each}
 
 							<!-- stations along the route: one per x-axis tick -->
-							{#each x.ticks(Math.max(2, Math.floor((width - PAD.left - PAD.right) / 70))) as tick, i (+tick)}
+							{#each x.ticks(Math.max(2, Math.floor((width - PAD.left - PAD.right) / 70))) as tick (+tick)}
 								<circle
 									cx={x(tick)}
 									cy={HEIGHT - PAD.bottom}
 									r="5"
 									class="fill-base-100"
-									stroke={['#1f9d6b', '#2f7fe0', '#f08a24', '#e0457b', '#8a5cf0'][i % 5]}
+									stroke="#2f7fe0"
 									stroke-width="3"
 								/>
 							{/each}
@@ -229,15 +229,11 @@
 							<defs>
 								<linearGradient id="route-gradient" x1="0" x2="1" y1="0" y2="0">
 									<stop offset="0%" stop-color="#1f9d6b" />
-									<stop offset="28%" stop-color="#2f7fe0" />
-									<stop offset="56%" stop-color="#f08a24" />
-									<stop offset="80%" stop-color="#e0457b" />
-									<stop offset="100%" stop-color="#8a5cf0" />
+									<stop offset="100%" stop-color="#2f7fe0" />
 								</linearGradient>
 								<linearGradient id="route-fill" x1="0" x2="1" y1="0" y2="0">
-									<stop offset="0%" stop-color="#1f9d6b" stop-opacity="0.2" />
-									<stop offset="56%" stop-color="#f08a24" stop-opacity="0.16" />
-									<stop offset="100%" stop-color="#8a5cf0" stop-opacity="0.2" />
+									<stop offset="0%" stop-color="#1f9d6b" stop-opacity="0.18" />
+									<stop offset="100%" stop-color="#2f7fe0" stop-opacity="0.18" />
 								</linearGradient>
 							</defs>
 							<path d={areaPath} fill="url(#route-fill)" />

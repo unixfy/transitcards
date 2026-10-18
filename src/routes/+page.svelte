@@ -118,37 +118,24 @@
 		replaceState(url, page.state);
 	}
 
-	// Each tile borrows its card's colors on hover, tracks the pointer for the foil sheen, and
+	// Each tile borrows its card's colors on hover and
 	// tints the page ground while it sits in the middle of the viewport
 	let washObserver;
 	let washTimer;
 
 	function tile(node, card) {
 		let palette;
-		const link = node.querySelector('a');
 		const onEnter = async () => {
 			palette ??= await getPalette(card.image);
 			node.style.setProperty('--c1', palette.c1);
 			node.style.setProperty('--c2', palette.c2);
 		};
-		const onMove = (e) => {
-			const r = link.getBoundingClientRect();
-			const x = e.clientX - r.left;
-			const y = e.clientY - r.top;
-			const st = node.style;
-			st.setProperty('--fx', `${(0.5 - x / r.width) * r.width * 0.9}px`);
-			st.setProperty('--fy', `${(0.5 - y / r.height) * r.height * 0.5}px`);
-			st.setProperty('--gx', `${x}px`);
-			st.setProperty('--gy', `${y}px`);
-		};
 		node.addEventListener('pointerenter', onEnter);
-		node.addEventListener('pointermove', onMove);
 		node.__card = card;
 		washObserver?.observe(node);
 		return {
 			destroy() {
 				node.removeEventListener('pointerenter', onEnter);
-				node.removeEventListener('pointermove', onMove);
 				washObserver?.unobserve(node);
 			}
 		};
@@ -427,7 +414,6 @@
 								loading="lazy"
 								style:view-transition-name={getHeroId() === card.id ? 'card-hero' : null}
 							/>
-							<span class="foil" aria-hidden="true"><i></i><b></b></span>
 						</figure>
 
 						<!-- Card info: always shown when toggled on, otherwise it expands out on hover -->

@@ -115,85 +115,6 @@ h3 {
 	}
 }
 
-/* Holographic foil that rides the pointer across a card. Only transforms move, so it stays on
-   the compositor; on touch screens it sweeps across as the card scrolls past instead. */
-.foil {
-	pointer-events: none;
-	position: absolute;
-	inset: 0;
-	overflow: hidden;
-	border-radius: inherit;
-	mix-blend-mode: soft-light;
-	opacity: 0;
-	transition: opacity 0.35s ease;
-}
-
-.foil > i {
-	position: absolute;
-	inset: -40%;
-	background: linear-gradient(
-		115deg,
-		transparent 30%,
-		rgb(255 119 115 / 0.6) 38%,
-		rgb(255 237 95 / 0.55) 43%,
-		rgb(168 255 95 / 0.55) 48%,
-		rgb(131 255 247 / 0.6) 53%,
-		rgb(120 148 255 / 0.6) 58%,
-		rgb(255 119 255 / 0.5) 63%,
-		transparent 72%
-	);
-	transform: translate3d(var(--fx, 0px), var(--fy, 0px), 0);
-	will-change: transform;
-}
-
-.foil > b {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 80%;
-	aspect-ratio: 1;
-	margin: -40% 0 0 -40%;
-	background: radial-gradient(circle, rgb(255 255 255 / 0.6), transparent 62%);
-	transform: translate3d(var(--gx, 50px), var(--gy, 50px), 0);
-	will-change: transform;
-}
-
-@media (hover: none) {
-	.foil {
-		opacity: 0.5;
-	}
-
-	.foil > b {
-		display: none;
-	}
-}
-
-@supports (animation-timeline: view()) {
-	@media (hover: none) {
-		.foil > i {
-			animation: foil-sweep linear both;
-			animation-timeline: view();
-		}
-	}
-}
-
-@keyframes foil-sweep {
-	from {
-		transform: translate3d(34%, 0, 0);
-	}
-
-	to {
-		transform: translate3d(-34%, 0, 0);
-	}
-}
-
-@media (hover: hover) and (min-width: 1024px) {
-	.group:hover .foil,
-	.group:focus-within .foil {
-		opacity: 0.85;
-	}
-}
-
 /* Shared-element morph between a grid tile and its detail page */
 ::view-transition-group(card-hero) {
 	animation-duration: 0.6s;
@@ -206,10 +127,6 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.foil {
-		display: none;
-	}
-
 	::view-transition-group(*),
 	::view-transition-old(*),
 	::view-transition-new(*) {
