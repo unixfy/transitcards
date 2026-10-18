@@ -5,7 +5,8 @@
 	import { onNavigate } from '$app/navigation';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
-	import { takeLucky } from '$lib/lucky';
+	import { takeLucky, warmPhoto, wait } from '$lib/lucky';
+	import { takeHeroImage } from '$lib/palette';
 	import { page } from '$app/stores';
 	let { data, children } = $props();
 
@@ -14,10 +15,13 @@
 	let dark = $state(false);
 
 	// Morph the tapped card between grid and detail where the browser can; otherwise a plain fade
-	onNavigate((navigation) => {
+	onNavigate(async (navigation) => {
 		if (!document.startViewTransition) return;
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		const lucky = takeLucky();
+		// Give the big photo a moment to load so the morph lands on the card, not on a blank frame
+		const tapped = takeHeroImage();
+		if (tapped) await Promise.race([warmPhoto(tapped), wait(700)]);
 		return new Promise((resolve) => {
 			const update = async () => {
 				resolve();

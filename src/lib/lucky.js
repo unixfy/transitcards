@@ -3,7 +3,7 @@ import { resolve } from '$app/paths';
 import { page } from '$app/state';
 import { readItems } from '@directus/sdk';
 import getDirectusInstance from '$lib/directus';
-import { getPalette, assetUrl } from '$lib/palette';
+import { getPalette, assetUrl, clearHeroNames } from '$lib/palette';
 
 // Set just before a random-card navigation so the layout can give it its own transition
 let pending = false;
@@ -13,7 +13,7 @@ export const takeLucky = () => {
 	return was;
 };
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // The detail page asks for the smallest of its 800/1200/1800 sources that covers the card
 function detailWidth() {
@@ -21,12 +21,11 @@ function detailWidth() {
 	return [800, 1200, 1800].find((w) => w >= css * window.devicePixelRatio) ?? 1800;
 }
 
-function warmPhoto(image) {
-	return new Promise((resolve) => {
-		const img = new Image();
-		img.onload = img.onerror = resolve;
-		img.src = assetUrl(image, detailWidth());
-	});
+// Load and decode the photo at the size the detail page will ask for
+export function warmPhoto(image) {
+	const img = new Image();
+	img.src = assetUrl(image, detailWidth());
+	return img.decode().catch(() => {});
 }
 
 // Pick a card in the browser and move to it without leaving the app. The photo and the card's
@@ -50,6 +49,8 @@ export async function goLucky() {
 	}
 	if (!card) throw new Error('no card');
 	await Promise.race([Promise.all([getPalette(card.image), warmPhoto(card.image)]), wait(900)]);
+	// A tile we came back from may still carry the transition name
+	clearHeroNames();
 	pending = true;
 	await goto(resolve('/card/[uuid]', { uuid: card.id }));
 }
