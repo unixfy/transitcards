@@ -116,18 +116,8 @@ export function setWash(palette, instant = false) {
 
 // Which card's photo is currently named for the view transition between grid and detail
 let heroId = null;
-let heroImage = null;
 export const getHeroId = () => heroId;
 export const setHeroId = (id) => (heroId = id);
-
-// The tapped tile's photo, so the layout can load the big version before the browser snapshots
-// the new page; read once per navigation
-export const setHeroImage = (image) => (heroImage = image);
-export const takeHeroImage = () => {
-	const image = heroImage;
-	heroImage = null;
-	return image;
-};
 
 // Only one element may carry the transition name at a time, or the browser skips the transition
 export function clearHeroNames() {

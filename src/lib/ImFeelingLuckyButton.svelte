@@ -1,6 +1,7 @@
 <script>
 	import { page } from '$app/state';
-	import { goLucky } from '$lib/lucky';
+	import { onMount } from 'svelte';
+	import { goLucky, primeLucky } from '$lib/lucky';
 
 	let busy = $state(false);
 	let onCard = $derived(page.route.id === '/card/[uuid]');
@@ -18,6 +19,12 @@
 			busy = false;
 		}
 	}
+
+	// Choose the next card in the background once the page has settled
+	onMount(() => {
+		const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 800));
+		idle(primeLucky);
+	});
 
 	// R draws another card, unless the visitor is typing somewhere
 	function onKeydown(event) {

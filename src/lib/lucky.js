@@ -4,6 +4,7 @@ import { page } from '$app/state';
 import { readItems } from '@directus/sdk';
 import getDirectusInstance from '$lib/directus';
 import { getPalette, assetUrl, clearHeroNames } from '$lib/palette';
+import { cacheCards } from '$lib/cardCache';
 
 // Set just before a random-card navigation so the layout can give it its own transition
 let pending = false;
@@ -28,27 +29,64 @@ export function warmPhoto(image) {
 	return img.decode().catch(() => {});
 }
 
-// Pick a card in the browser and move to it without leaving the app. The photo and the card's
-// colors are fetched first (capped, so a slow network never stalls the click) which lets the new
-// page land fully formed instead of loading in around the transition.
-export async function goLucky() {
+// Everything a card page shows, so the page can open without another request
+const CARD_FIELDS = [
+	'id',
+	'name',
+	'date_acquired',
+	'image',
+	'issuing_agency.id',
+	'issuing_agency.name',
+	'issuing_agency.city',
+	'notes'
+];
+
+async function pickCard() {
 	const total = page.data.totalAllCards;
 	if (!total) throw new Error('empty collection');
-	const directus = getDirectusInstance();
-	let card;
-	for (let attempt = 0; attempt < 3; attempt++) {
-		const [candidate] = await directus.request(
-			readItems('transit_cards', {
-				limit: 1,
-				offset: Math.floor(Math.random() * total),
-				fields: ['id', 'image']
-			})
-		);
-		card = candidate;
-		if (card && card.id !== page.params.uuid) break;
-	}
+	const [card] = await getDirectusInstance().request(
+		readItems('transit_cards', {
+			limit: 1,
+			offset: Math.floor(Math.random() * total),
+			fields: CARD_FIELDS
+		})
+	);
 	if (!card) throw new Error('no card');
-	await Promise.race([Promise.all([getPalette(card.image), warmPhoto(card.image)]), wait(900)]);
+	cacheCards([card]);
+	return card;
+}
+
+// The next card is chosen, and its photo and colors fetched, while the visitor is still looking at
+// this one, so a draw is instant instead of paying for the network on the click.
+let next = null;
+
+function prepare() {
+	const draw = pickCard();
+	const ready = draw.then((card) => Promise.all([getPalette(card.image), warmPhoto(card.image)]));
+	// Failures surface where the draw is used; here they only mean "nothing prepared"
+	draw.catch(() => {});
+	ready.catch(() => {});
+	return { draw, ready };
+}
+
+export function primeLucky() {
+	if (next || navigator.connection?.saveData) return;
+	next = prepare();
+}
+
+// Pick a card in the browser and move to it without leaving the app. The photo and the card's
+// colors come first (capped, so a slow network never stalls the click) which lets the new page
+// land fully formed instead of loading in around the transition.
+export async function goLucky() {
+	let attempt = next ?? prepare();
+	next = null;
+	let card = await attempt.draw;
+	if (card.id === page.params.uuid) {
+		// Prepared before we landed on this very card; draw again
+		attempt = prepare();
+		card = await attempt.draw;
+	}
+	await Promise.race([attempt.ready, wait(900)]);
 	// A tile we came back from may still carry the transition name
 	clearHeroNames();
 	pending = true;

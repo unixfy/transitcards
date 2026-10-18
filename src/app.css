@@ -162,3 +162,24 @@ h3 {
 		animation: none !important;
 	}
 }
+
+/* Instant response to a press, before any network or navigation work has started */
+a,
+button,
+label,
+summary {
+	touch-action: manipulation;
+}
+
+a.card:active,
+a.btn:active {
+	transform: scale(0.97);
+	transition: transform 0.08s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	a.card:active,
+	a.btn:active {
+		transform: none;
+	}
+}

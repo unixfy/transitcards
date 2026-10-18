@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import getDirectusInstance from '$lib/directus';
 import { readItems } from '@directus/sdk';
+import { cacheCards, getCachedCard } from '$lib/cardCache';
 
 function isValidUUID(uuid) {
 	const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -15,12 +16,26 @@ function formatDate(dateString) {
 }
 
 export async function load({ fetch, params }) {
-	const directus = getDirectusInstance(fetch);
-
 	// return 400 if uuid is invalid
 	if (!isValidUUID(params.uuid)) {
 		error(400, 'Invalid card UUID');
 	}
+
+	// A card the grid (or a random draw) already loaded opens instantly, with no round trip
+	const cached = getCachedCard(params.uuid);
+	if (cached) {
+		return {
+			transit_card: {
+				...cached,
+				date_acquired: cached.date_acquired
+					? formatDate(cached.date_acquired)
+					: cached.date_acquired
+			},
+			title: cached.name || 'Transit Card Details'
+		};
+	}
+
+	const directus = getDirectusInstance(fetch);
 
 	const response = await directus.request(
 		readItems('transit_cards', {
@@ -47,13 +62,15 @@ export async function load({ fetch, params }) {
 	} else {
 		// Exactly one result, return the item
 
-		// format the date first - if date_acquired is not null
-		if (response[0].date_acquired) {
-			response[0].date_acquired = formatDate(response[0].date_acquired);
+		// remember the raw card, then format the date for display - if date_acquired is not null
+		cacheCards([response[0]]);
+		const card = { ...response[0] };
+		if (card.date_acquired) {
+			card.date_acquired = formatDate(card.date_acquired);
 		}
 
 		return {
-			transit_card: response[0],
+			transit_card: card,
 			title: response[0].name || 'Transit Card Details'
 		};
 	}

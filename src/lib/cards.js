@@ -1,4 +1,5 @@
 import { readItems } from '@directus/sdk';
+import { cacheCards } from '$lib/cardCache';
 
 export const CARDS_PER_PAGE = 50;
 
@@ -33,8 +34,8 @@ export function buildCardsFilter(agencyFilter, searchQuery) {
 
 // Fetch `pageCount` consecutive pages of transit cards starting at `page`;
 // `id` is the final sort key so pages never overlap
-export function fetchCardsPages(directus, page, filter, pageCount = 1) {
-	return directus.request(
+export async function fetchCardsPages(directus, page, filter, pageCount = 1) {
+	const cards = await directus.request(
 		readItems('transit_cards', {
 			limit: CARDS_PER_PAGE * pageCount,
 			offset: (page - 1) * CARDS_PER_PAGE,
@@ -52,4 +53,6 @@ export function fetchCardsPages(directus, page, filter, pageCount = 1) {
 			...(Object.keys(filter).length > 0 && { filter })
 		})
 	);
+	cacheCards(cards);
+	return cards;
 }

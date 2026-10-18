@@ -8,15 +8,9 @@
 	import getDirectusInstance from '$lib/directus';
 	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
+	import { cacheCards } from '$lib/cardCache';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
-	import {
-		getPalette,
-		setWash,
-		getHeroId,
-		setHeroId,
-		setHeroImage,
-		clearHeroNames
-	} from '$lib/palette';
+	import { getPalette, setWash, getHeroId, setHeroId, clearHeroNames } from '$lib/palette';
 
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
@@ -38,6 +32,7 @@
 	$: if (data !== loadedFrom) {
 		// eslint-disable-next-line no-useless-assignment -- read by this reactive block on the next update
 		loadedFrom = data;
+		cacheCards(data.transit_cards);
 		generation++;
 		filterKey = JSON.stringify([data.selectedAgency, data.searchQuery]);
 		// load() returns pages 1 through currentPage together; split them back into pages
@@ -160,7 +155,6 @@
 		clearHeroNames();
 		e.currentTarget.querySelector('img').style.viewTransitionName = 'card-hero';
 		setHeroId(card.id);
-		setHeroImage(card.image);
 	}
 
 	// Card details are hidden unless the visitor opts in; the choice is remembered

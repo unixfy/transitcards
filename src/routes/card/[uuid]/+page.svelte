@@ -132,6 +132,7 @@
 					style:view-transition-name="card-hero"
 					class="tilt motion-fancy relative aspect-[3.375/2.125] w-full rounded-[3.5%/5.5%] shadow-[0_28px_36px_-18px_rgb(0_0_0/0.5)] [transform-style:preserve-3d]"
 				>
+					<!-- The small photo is already cached from the grid; it shows at once while the sharp one loads -->
 					<img
 						src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=1200"
 						srcset="
@@ -141,7 +142,8 @@
 						"
 						sizes="(min-width: 1024px) 640px, 100vw"
 						alt={card.name}
-						class="skeleton h-full w-full rounded-[3.5%/5.5%] object-cover"
+						class="h-full w-full rounded-[3.5%/5.5%] object-cover"
+						style="background: url(https://cms.alexwang.net/assets/{card.image}?format=webp&width=400) center / cover;"
 					/>
 				</div>
 			</div>
