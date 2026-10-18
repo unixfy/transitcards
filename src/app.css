@@ -9,7 +9,7 @@
 
 @theme {
 	--font-sans: 'IBM Plex Sans', sans-serif;
-	--font-display: 'Space Grotesk', monospace;
+	--font-display: 'Space Grotesk', sans-serif;
 	--font-mono: 'IBM Plex Mono', monospace;
 }
 
@@ -17,4 +17,202 @@
 	themes: emerald --default;
 }
 
+/* Dark counterpart of emerald: same accents on near-black surfaces */
+@plugin 'daisyui/theme' {
+	name: 'emerald-dark';
+	color-scheme: dark;
+	--color-base-100: #0b0f14;
+	--color-base-200: #12181f;
+	--color-base-300: #1c242d;
+	--color-base-content: oklch(93% 0.01 250);
+	--color-primary: oklch(76.662% 0.135 153.45);
+	--color-primary-content: oklch(25% 0.04 162.24);
+	--color-secondary: oklch(68% 0.18 261.294);
+	--color-secondary-content: oklch(100% 0 0);
+	--color-accent: oklch(72.772% 0.149 33.2);
+	--color-accent-content: oklch(0% 0 0);
+	--color-neutral: oklch(30% 0.02 262);
+	--color-neutral-content: oklch(96% 0.005 250);
+	--color-info: oklch(72.06% 0.191 231.6);
+	--color-info-content: oklch(0% 0 0);
+	--color-success: oklch(64.8% 0.15 160);
+	--color-success-content: oklch(0% 0 0);
+	--color-warning: oklch(84.71% 0.199 83.87);
+	--color-warning-content: oklch(0% 0 0);
+	--color-error: oklch(71.76% 0.221 22.18);
+	--color-error-content: oklch(0% 0 0);
+	--radius-selector: 1rem;
+	--radius-field: 0.5rem;
+	--radius-box: 1rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
+}
+
+/* Text-safe brand colors: daisyUI's pale primary is too light for text on white */
+:root {
+	--brand: oklch(46% 0.11 153);
+	--brand-2: oklch(50% 0.2 261);
+}
+
+[data-theme='emerald-dark'] {
+	--brand: var(--color-primary);
+	--brand-2: oklch(75% 0.13 261);
+}
+
 @custom-variant hover (&:hover);
+
+/* The page ground wears the colors of the card in focus (see Wash.svelte; house colors otherwise) */
+:root {
+	--wash-1: hsl(153 70% 42%);
+	--wash-2: hsl(221 80% 52%);
+}
+
+.site-bg {
+	isolation: isolate;
+	min-height: 100vh;
+	background-color: oklch(97% 0.008 160);
+}
+
+[data-theme='emerald-dark'] .site-bg {
+	background-color: #06090c;
+}
+
+/* Browser surfaces, themed from the palette */
+:root {
+	--brand-solid: oklch(46% 0.12 153);
+	accent-color: var(--brand);
+	scrollbar-color: color-mix(in oklab, var(--color-base-content) 35%, transparent) transparent;
+}
+
+::selection {
+	background: color-mix(in oklab, var(--brand) 30%, transparent);
+	color: inherit;
+}
+
+:focus-visible {
+	outline: 2px solid var(--brand);
+	outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+	text-wrap: balance;
+}
+
+.tnum {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Keep motion-heavy effects off for people who ask for less */
+@media (prefers-reduced-motion: reduce) {
+	.motion-fancy {
+		transition: none !important;
+		transform: none !important;
+	}
+}
+
+/* Holographic foil that rides the pointer across a card. Only transforms move, so it stays on
+   the compositor; on touch screens it sweeps across as the card scrolls past instead. */
+.foil {
+	pointer-events: none;
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	border-radius: inherit;
+	mix-blend-mode: soft-light;
+	opacity: 0;
+	transition: opacity 0.35s ease;
+}
+
+.foil > i {
+	position: absolute;
+	inset: -40%;
+	background: linear-gradient(
+		115deg,
+		transparent 30%,
+		rgb(255 119 115 / 0.6) 38%,
+		rgb(255 237 95 / 0.55) 43%,
+		rgb(168 255 95 / 0.55) 48%,
+		rgb(131 255 247 / 0.6) 53%,
+		rgb(120 148 255 / 0.6) 58%,
+		rgb(255 119 255 / 0.5) 63%,
+		transparent 72%
+	);
+	transform: translate3d(var(--fx, 0px), var(--fy, 0px), 0);
+	will-change: transform;
+}
+
+.foil > b {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 80%;
+	aspect-ratio: 1;
+	margin: -40% 0 0 -40%;
+	background: radial-gradient(circle, rgb(255 255 255 / 0.6), transparent 62%);
+	transform: translate3d(var(--gx, 50px), var(--gy, 50px), 0);
+	will-change: transform;
+}
+
+@media (hover: none) {
+	.foil {
+		opacity: 0.5;
+	}
+
+	.foil > b {
+		display: none;
+	}
+}
+
+@supports (animation-timeline: view()) {
+	@media (hover: none) {
+		.foil > i {
+			animation: foil-sweep linear both;
+			animation-timeline: view();
+		}
+	}
+}
+
+@keyframes foil-sweep {
+	from {
+		transform: translate3d(34%, 0, 0);
+	}
+
+	to {
+		transform: translate3d(-34%, 0, 0);
+	}
+}
+
+@media (hover: hover) and (min-width: 1024px) {
+	.group:hover .foil,
+	.group:focus-within .foil {
+		opacity: 0.85;
+	}
+}
+
+/* Shared-element morph between a grid tile and its detail page */
+::view-transition-group(card-hero) {
+	animation-duration: 0.6s;
+	animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.25s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.foil {
+		display: none;
+	}
+
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+}

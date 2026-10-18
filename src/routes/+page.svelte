@@ -9,6 +9,7 @@
 	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
+	import { getPalette, setWash, getHeroId, setHeroId } from '$lib/palette';
 
 	let searchInput = data.searchQuery || '';
 	let isSearching = false;
@@ -117,7 +118,93 @@
 		replaceState(url, page.state);
 	}
 
+	// Each tile borrows its card's colors on hover, tracks the pointer for the foil sheen, and
+	// tints the page ground while it sits in the middle of the viewport
+	let washObserver;
+	let washTimer;
+
+	function tile(node, card) {
+		let palette;
+		const link = node.querySelector('a');
+		const onEnter = async () => {
+			palette ??= await getPalette(card.image);
+			node.style.setProperty('--c1', palette.c1);
+			node.style.setProperty('--c2', palette.c2);
+		};
+		const onMove = (e) => {
+			const r = link.getBoundingClientRect();
+			const x = e.clientX - r.left;
+			const y = e.clientY - r.top;
+			const st = node.style;
+			st.setProperty('--fx', `${(0.5 - x / r.width) * r.width * 0.9}px`);
+			st.setProperty('--fy', `${(0.5 - y / r.height) * r.height * 0.5}px`);
+			st.setProperty('--gx', `${x}px`);
+			st.setProperty('--gy', `${y}px`);
+		};
+		node.addEventListener('pointerenter', onEnter);
+		node.addEventListener('pointermove', onMove);
+		node.__card = card;
+		washObserver?.observe(node);
+		return {
+			destroy() {
+				node.removeEventListener('pointerenter', onEnter);
+				node.removeEventListener('pointermove', onMove);
+				washObserver?.unobserve(node);
+			}
+		};
+	}
+
+	// The shimmering placeholder keeps animating behind loaded photos unless it is taken away
+	function loaded(img) {
+		const done = () => img.closest('figure')?.classList.remove('skeleton');
+		if (img.complete) done();
+		else img.addEventListener('load', done, { once: true });
+	}
+
+	// Name the tapped photo so the browser can morph it into the detail page
+	function heroOnClick(e, card) {
+		for (const el of document.querySelectorAll('[data-hero]')) {
+			el.style.viewTransitionName = '';
+			el.removeAttribute('data-hero');
+		}
+		const img = e.currentTarget.querySelector('img');
+		img.style.viewTransitionName = 'card-hero';
+		img.dataset.hero = '';
+		setHeroId(card.id);
+	}
+
+	// Card details are hidden unless the visitor opts in; the choice is remembered
+	let showInfo = false;
+
+	function toggleInfo() {
+		showInfo = !showInfo;
+		try {
+			localStorage.setItem('showCardInfo', showInfo ? '1' : '0');
+		} catch {
+			// storage unavailable (private mode); the toggle still works for this visit
+		}
+	}
+
 	onMount(() => {
+		washObserver = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (entry.isIntersecting && entry.target.__card) {
+						// Wait for the scroll to settle so a fast flick doesn't trigger a color change per card
+						const card = entry.target.__card;
+						clearTimeout(washTimer);
+						washTimer = setTimeout(() => getPalette(card.image).then(setWash), 260);
+					}
+				}
+			},
+			{ rootMargin: '-42% 0px -42% 0px' }
+		);
+		for (const el of document.querySelectorAll('[data-tile]')) washObserver.observe(el);
+		try {
+			showInfo = localStorage.getItem('showCardInfo') === '1';
+		} catch {
+			// ignore
+		}
 		let frame = null;
 		const onScroll = () => {
 			if (frame !== null) return;
@@ -131,6 +218,8 @@
 		addEventListener('resize', onScroll);
 		onScroll();
 		return () => {
+			washObserver?.disconnect();
+			clearTimeout(washTimer);
 			removeEventListener('scroll', onScroll);
 			removeEventListener('resize', onScroll);
 			if (frame !== null) cancelAnimationFrame(frame);
@@ -189,38 +278,27 @@
 
 	const [send, receive] = crossfade({
 		duration: (d) => Math.sqrt(d * 200), // Adjust duration as needed
-		fallback(node) {
-			const style = getComputedStyle(node);
-			const transform = style.transform === 'none' ? '' : style.transform;
-
-			return {
-				duration: 300, // Fallback duration
-				easing: quintOut,
-				css: (t) => `
-          transform: ${transform} scale(${t});
-          opacity: ${t}
-        `
-			};
+		// Opacity only: scaling dozens of tiles at once is what makes a freshly loaded page stutter
+		fallback() {
+			return { duration: 240, easing: quintOut, css: (t) => `opacity: ${t}` };
 		}
 	});
 </script>
 
-<div class="flex flex-col gap-4 md:gap-6">
+<div class="flex flex-col gap-3 md:gap-6">
 	<!-- I'm feeling lucky button -->
 	<ImFeelingLuckyButton />
 
 	<!-- Search & Filter Section -->
-	<div class="w-full rounded-lg border bg-black/80 p-6">
-		<form on:submit={handleSearch} class="space-y-4">
-			<!-- Filter by Agency Dropdown -->
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<div>
-					<label for="agency-filter" class="mb-2 block font-mono text-white uppercase"
-						>Filter by Agency</label
-					>
+	<div class="card card-border bg-base-100 w-full">
+		<form on:submit={handleSearch} class="card-body gap-3 p-3 md:p-6">
+			<div class="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4">
+				<!-- Filter by Agency Dropdown -->
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend text-sm max-md:sr-only">Filter by Agency</legend>
 					<select
 						id="agency-filter"
-						class="select select-bordered border-neutral-content/20 text-neutral-content w-full bg-black/80"
+						class="select w-full"
 						value={data.selectedAgency || ''}
 						on:change={handleAgencyChange}
 					>
@@ -229,42 +307,41 @@
 							<option value={agency.id}>{agency.name} - {agency.city}</option>
 						{/each}
 					</select>
-				</div>
+				</fieldset>
 
 				<!-- Server-Side Full-Text Search -->
-				<div>
-					<label for="search-input" class="mb-2 block font-mono text-white uppercase"
-						>Search Cards</label
-					>
-					<div class="flex gap-2">
+				<fieldset class="fieldset">
+					<legend class="fieldset-legend text-sm max-md:sr-only">Search Cards</legend>
+					<div class="join w-full">
 						<input
 							id="search-input"
 							type="text"
+							aria-label="Search cards"
 							placeholder="Search by name, agency, city, or notes..."
 							bind:value={searchInput}
-							class="input input-bordered border-neutral-content/20 text-neutral-content placeholder-neutral-content/40 flex-1 bg-black/80"
+							class="input join-item placeholder:text-base-content/80 w-full"
 						/>
 						<button
 							type="submit"
-							class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20"
+							class="btn join-item border-0 bg-(--brand-solid) text-white hover:brightness-110"
 							disabled={isSearching}
 						>
 							{#if isSearching}
-								<span class="loading loading-spinner h-5 w-5"></span>
+								<span class="loading loading-spinner"></span>
 							{:else}
 								Search
 							{/if}
 						</button>
 					</div>
-				</div>
+				</fieldset>
 			</div>
 
 			{#if data.selectedAgency || data.searchQuery}
-				<div class="flex flex-col md:flex-row">
-					<div class="bg-neutral-content/5 flex items-center justify-between rounded p-3">
-						<span class="text-neutral-content/70 font-mono">
+				<div class="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
+					<div role="status" class="alert alert-soft py-2">
+						<span>
 							{#if data.searchQuery}
-								Search: "<span class="text-neutral-content">{data.searchQuery}</span>" -
+								Search: "<span class="font-bold">{data.searchQuery}</span>" -
 							{/if}
 							{data.totalCount} result{data.totalCount == 1 ? '' : 's'} found
 						</span>
@@ -272,7 +349,7 @@
 
 					<button
 						type="button"
-						class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 mt-3 md:mt-0 md:ml-auto"
+						class="btn btn-soft md:ml-auto"
 						on:click={async () => {
 							searchInput = '';
 							const url = new URL(window.location);
@@ -284,8 +361,8 @@
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
+							width="20"
+							height="20"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -295,7 +372,6 @@
 							><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
 							></line></svg
 						>
-
 						Clear All Filters
 					</button>
 				</div>
@@ -307,38 +383,72 @@
 	<AcquisitionChart counts={data.acquisitionCounts} earliest={data.earliestAcquired} />
 
 	{#if items.length > 0}
-		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+		<label class="label text-base-content/80 -mt-1 cursor-pointer justify-end gap-3 text-sm">
+			Card info
+			<input
+				type="checkbox"
+				role="switch"
+				class="toggle toggle-primary toggle-lg md:toggle-md"
+				checked={showInfo}
+				on:change={toggleInfo}
+			/>
+		</label>
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
 			{#each items as { card, pageStart } (card.id)}
-				<a
-					href={`/card/${card.id}`}
+				<!--
+					The slot keeps the card's image footprint, so hover growth and the expanding info
+					never shift the grid. With info toggled on, the tile flows normally instead.
+				-->
+				<div
+					class="group relative {showInfo
+						? 'flex'
+						: 'aspect-[3.375/2.125]'} lg:focus-within:z-20 lg:hover:z-20"
+					data-tile
 					data-page-start={pageStart}
-					class="group border-neutral-content/20 block overflow-hidden rounded-xl border bg-black/80 shadow-xl transition-all hover:shadow-2xl lg:hover:-translate-y-3 lg:hover:scale-105"
+					style="--c1: var(--brand); --c2: var(--brand-2);"
+					use:tile={card}
 					in:receive={{ key: card.id }}
 					out:send={{ key: card.id }}
 				>
-					<!-- Card Image with Transit-style Frame -->
-					<div class="bg-neutral-content/8 skeleton relative overflow-hidden rounded-xl">
-						<div
-							class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20 opacity-0 backdrop-blur-sm transition-opacity lg:group-hover:opacity-100"
-						>
-							<span class="text-neutral-content/90 font-mono">VIEW DETAILS →</span>
-						</div>
-						<img
-							src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
-							alt={card.name}
-							class="aspect-[3.375/2.125] w-full object-cover"
-							loading="lazy"
-						/>
-					</div>
+					<a
+						href={`/card/${card.id}`}
+						aria-label={card.name}
+						on:click={(e) => heroOnClick(e, card)}
+						class="motion-fancy card card-border bg-base-100 overflow-hidden shadow-sm transition-all duration-300 ease-out focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none {showInfo
+							? 'w-full'
+							: 'absolute inset-x-0 top-0'} lg:hover:scale-[1.12] lg:hover:border-(--c1) lg:hover:shadow-[0_24px_34px_-14px_color-mix(in_oklab,var(--c1)_65%,transparent)] lg:focus-visible:scale-[1.12]"
+					>
+						<figure class="skeleton relative">
+							<img
+								src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+								alt={card.name}
+								class="aspect-[3.375/2.125] w-full rounded-none object-cover"
+								use:loaded
+								loading="lazy"
+								style:view-transition-name={getHeroId() === card.id ? 'card-hero' : null}
+							/>
+							<span class="foil" aria-hidden="true"><i></i><b></b></span>
+						</figure>
 
-					<div class="space-y-1 p-3">
-						<!-- Card Information -->
-						<h3 class="font-display text-primary text-md leading-5 font-bold">{card.name}</h3>
-						<p class="text-neutral-content font-mono text-xs leading-4">
-							{card.issuing_agency.name} ({card.issuing_agency.city})
-						</p>
-					</div>
-				</a>
+						<!-- Card info: always shown when toggled on, otherwise it expands out on hover -->
+						<div
+							class="grid transition-[grid-template-rows] duration-300 ease-out {showInfo
+								? 'flex-1 grid-rows-[1fr]'
+								: 'grid-rows-[0fr] lg:group-focus-within:grid-rows-[1fr] lg:group-hover:grid-rows-[1fr]'}"
+						>
+							<div class="overflow-hidden">
+								<div class="card-body gap-1 p-3">
+									<h3 class="card-title font-display text-base leading-5 text-(--brand)">
+										{card.name}
+									</h3>
+									<p class="text-xs leading-4">
+										{card.issuing_agency.name} ({card.issuing_agency.city})
+									</p>
+								</div>
+							</div>
+						</div>
+					</a>
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -349,11 +459,11 @@
 			<a
 				bind:this={sentinel}
 				href={pageHref(lastLoadedPage + 1)}
-				class="btn btn-neutral bg-neutral-content/5 hover:bg-neutral-content/10 border-neutral-content/20 lg:btn-xl"
+				class="btn btn-soft lg:btn-xl"
 				on:click|preventDefault={loadMore}
 			>
 				{#if loadingMore}
-					<span class="loading loading-spinner h-5 w-5"></span>
+					<span class="loading loading-spinner"></span>
 					Loading…
 				{:else if loadError}
 					Couldn't load more cards. Retry
@@ -363,10 +473,8 @@
 			</a>
 		</div>
 	{:else if items.length === 0}
-		<div class="border-neutral-content/20 rounded-lg border bg-black/80 p-6 text-center">
-			<p class="text-neutral-content/70 font-mono text-lg">
-				Oops! No cards found. Try adjusting your search or filters.
-			</p>
+		<div role="alert" class="alert alert-soft justify-center text-lg">
+			<span>Oops! No cards found. Try adjusting your search or filters.</span>
 		</div>
 	{/if}
 </div>

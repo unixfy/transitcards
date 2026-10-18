@@ -407,7 +407,7 @@
 		display: flex;
 		align-items: baseline;
 		gap: 0.75rem;
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		color: rgb(255 255 255 / 0.55);
 		min-height: 1.5rem;
 	}
@@ -421,8 +421,7 @@
 
 	.clock .date {
 		font-size: clamp(0.65rem, 1.2vw, 0.85rem);
-		text-transform: uppercase;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.02em;
 	}
 
 	.details-slot {
@@ -435,10 +434,9 @@
 	}
 
 	.eyebrow {
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		font-size: clamp(0.7rem, 1.35vw, 0.95rem);
-		text-transform: uppercase;
-		letter-spacing: 0.18em;
+		letter-spacing: 0.02em;
 		background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
 		background-clip: text;
 		-webkit-background-clip: text;
@@ -470,23 +468,21 @@
 
 	.acquired {
 		margin-top: 0.4em;
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		font-size: clamp(0.65rem, 1.2vw, 0.85rem);
 		color: rgb(255 255 255 / 0.45);
 	}
 
 	.acquired span {
-		text-transform: uppercase;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.02em;
 		margin-right: 0.4em;
 	}
 
 	.meta {
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		font-size: clamp(0.6rem, 1.1vw, 0.75rem);
 		color: rgb(255 255 255 / 0.4);
-		text-transform: uppercase;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.02em;
 	}
 
 	.progress {
@@ -540,7 +536,7 @@
 		background: rgb(0 0 0 / 0.55);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
-		font-family: var(--font-mono);
+		font-family: var(--font-sans);
 		font-size: 0.7rem;
 		letter-spacing: 0.05em;
 		color: rgb(255 255 255 / 0.75);

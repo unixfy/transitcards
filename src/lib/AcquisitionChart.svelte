@@ -115,50 +115,44 @@
 	}
 </script>
 
-<div class="collapse-arrow border-neutral-content/20 collapse rounded-lg border bg-black/80">
+<div class="collapse-arrow bg-base-100 border-base-content/15 collapse border">
 	<input type="checkbox" bind:checked={open} aria-label="Toggle collection growth graph" />
-	<div class="collapse-title flex flex-wrap items-center gap-3 font-mono text-white uppercase">
+	<div class="collapse-title text-base-content flex flex-wrap items-center gap-3">
 		Cards Over Time
-		<span class="badge badge-primary badge-outline font-mono">
+		<span class="badge badge-outline">
 			{totalCount} card{totalCount === 1 ? '' : 's'}
 		</span>
 	</div>
 	<div class="collapse-content">
 		{#if points.length === 0}
-			<p class="text-neutral-content/70 py-6 text-center font-mono">No cards to graph.</p>
+			<p class="text-base-content/80 py-6 text-center">No cards to graph.</p>
 		{:else}
 			<div class="flex flex-col gap-4">
-				<div
-					class="stats stats-vertical sm:stats-horizontal border-neutral-content/20 text-neutral-content w-full border bg-black/40"
-				>
+				<div class="stats stats-vertical sm:stats-horizontal bg-base-200 w-full">
 					<div class="stat">
-						<div class="stat-title text-neutral-content/60 font-mono text-xs uppercase">Cards</div>
-						<div class="stat-value text-primary font-display">{totalCount}</div>
-						<div class="stat-desc text-neutral-content/60 font-mono">
+						<div class="stat-title text-base-content/80 text-sm">Cards</div>
+						<div class="stat-value font-display text-(--brand)">{totalCount}</div>
+						<div class="stat-desc text-base-content/80">
 							{undatedCount} without an acquisition date
 						</div>
 					</div>
 					<div class="stat">
-						<div class="stat-title text-neutral-content/60 font-mono text-xs uppercase">
-							First acquired card
-						</div>
-						<div class="stat-value font-display text-2xl">
+						<div class="stat-title text-base-content/80 text-sm">First acquired card</div>
+						<div class="stat-value font-display tnum text-2xl">
 							{firstDated ? formatDate(toDate(firstDated.date)) : '—'}
 						</div>
 					</div>
 					<div class="stat">
-						<div class="stat-title text-neutral-content/60 font-mono text-xs uppercase">
-							Latest acquired card
-						</div>
+						<div class="stat-title text-base-content/80 text-sm">Latest acquired card</div>
 						{#if latestDated}
-							<div class="stat-value font-display text-2xl">
+							<div class="stat-value font-display tnum text-2xl">
 								{formatDate(toDate(latestDated.date))}
 							</div>
-							<div class="stat-desc text-neutral-content/60 font-mono">
+							<div class="stat-desc text-base-content/80">
 								+{latestDated.count} card{latestDated.count === 1 ? '' : 's'}
 							</div>
 						{:else}
-							<div class="stat-value font-display text-2xl">—</div>
+							<div class="stat-value font-display tnum text-2xl">—</div>
 						{/if}
 					</div>
 				</div>
@@ -168,10 +162,7 @@
 						{#each RANGES as range (range.label)}
 							<button
 								type="button"
-								class="join-item btn btn-sm border-neutral-content/20 font-mono {rangeMonths ===
-								range.months
-									? 'btn-primary'
-									: 'bg-neutral-content/5 hover:bg-neutral-content/10 text-neutral-content'}"
+								class="join-item btn btn-sm {rangeMonths === range.months ? 'btn-primary' : ''}"
 								aria-pressed={rangeMonths === range.months}
 								onclick={() => {
 									rangeMonths = range.months;
@@ -202,15 +193,27 @@
 									x2={width - PAD.right}
 									y1={y(tick)}
 									y2={y(tick)}
-									class="stroke-neutral-content/10"
+									class="stroke-base-content/10"
 								/>
 								<text
 									x={PAD.left - 8}
 									y={y(tick)}
 									text-anchor="end"
 									dominant-baseline="middle"
-									class="fill-neutral-content/60 font-mono text-[11px]">{tick}</text
+									class="fill-base-content/80 text-[11px]">{tick}</text
 								>
+							{/each}
+
+							<!-- stations along the route: one per x-axis tick -->
+							{#each x.ticks(Math.max(2, Math.floor((width - PAD.left - PAD.right) / 70))) as tick, i (+tick)}
+								<circle
+									cx={x(tick)}
+									cy={HEIGHT - PAD.bottom}
+									r="5"
+									class="fill-base-100"
+									stroke={['#1f9d6b', '#2f7fe0', '#f08a24', '#e0457b', '#8a5cf0'][i % 5]}
+									stroke-width="3"
+								/>
 							{/each}
 
 							<!-- x-axis labels -->
@@ -219,16 +222,32 @@
 									x={x(tick)}
 									y={HEIGHT - 8}
 									text-anchor="middle"
-									class="fill-neutral-content/60 font-mono text-[11px]">{x.tickFormat()(tick)}</text
+									class="fill-base-content/80 text-[11px]">{x.tickFormat()(tick)}</text
 								>
 							{/each}
 
-							<path d={areaPath} class="fill-primary/15" />
+							<defs>
+								<linearGradient id="route-gradient" x1="0" x2="1" y1="0" y2="0">
+									<stop offset="0%" stop-color="#1f9d6b" />
+									<stop offset="28%" stop-color="#2f7fe0" />
+									<stop offset="56%" stop-color="#f08a24" />
+									<stop offset="80%" stop-color="#e0457b" />
+									<stop offset="100%" stop-color="#8a5cf0" />
+								</linearGradient>
+								<linearGradient id="route-fill" x1="0" x2="1" y1="0" y2="0">
+									<stop offset="0%" stop-color="#1f9d6b" stop-opacity="0.2" />
+									<stop offset="56%" stop-color="#f08a24" stop-opacity="0.16" />
+									<stop offset="100%" stop-color="#8a5cf0" stop-opacity="0.2" />
+								</linearGradient>
+							</defs>
+							<path d={areaPath} fill="url(#route-fill)" />
 							<path
 								d={linePath}
-								class="stroke-primary fill-none"
-								stroke-width="2"
+								fill="none"
+								stroke="url(#route-gradient)"
+								stroke-width="4"
 								stroke-linejoin="round"
+								stroke-linecap="round"
 							/>
 
 							{#if hovered}
@@ -237,14 +256,14 @@
 									x2={x(hovered.date)}
 									y1={PAD.top}
 									y2={HEIGHT - PAD.bottom}
-									class="stroke-neutral-content/40"
+									class="stroke-base-content/40"
 									stroke-dasharray="4 4"
 								/>
 								<circle
 									cx={x(hovered.date)}
 									cy={y(hovered.cumulative)}
 									r="5"
-									class="fill-primary stroke-black"
+									class="stroke-base-100 fill-(--brand)"
 									stroke-width="2"
 								/>
 							{/if}
@@ -252,19 +271,19 @@
 
 						{#if hovered}
 							<div
-								class="bg-neutral text-neutral-content rounded-box pointer-events-none absolute z-10 px-3 py-2 font-mono text-xs whitespace-nowrap shadow-xl"
+								class="bg-neutral text-neutral-content rounded-box pointer-events-none absolute z-10 px-3 py-2 text-sm whitespace-nowrap shadow-xl"
 								style="left: {Math.min(Math.max(x(hovered.date), 70), width - 70)}px; top: {y(
 									hovered.cumulative
 								) > 90
 									? y(hovered.cumulative) - 80
 									: y(hovered.cumulative) + 14}px; transform: translateX(-50%)"
 							>
-								<div class="text-neutral-content/70">{formatDate(hovered.date)}</div>
+								<div class="text-neutral-content/80">{formatDate(hovered.date)}</div>
 								<div class="text-primary text-sm font-bold">
 									{hovered.cumulative} card{hovered.cumulative === 1 ? '' : 's'}
 								</div>
 								{#if !hovered.isRangeStart}
-									<div class="text-neutral-content/70">+{hovered.added} acquired</div>
+									<div class="text-neutral-content/80">+{hovered.added} acquired</div>
 								{/if}
 							</div>
 						{/if}
@@ -272,7 +291,7 @@
 				</div>
 
 				{#if undatedCount > 0 && earliest}
-					<p class="text-neutral-content/50 font-mono text-xs">
+					<p class="text-base-content/80 text-sm">
 						* {undatedCount} card{undatedCount === 1 ? '' : 's'} without an acquisition date
 						{undatedCount === 1 ? 'is' : 'are'} counted as acquired on {formatDate(
 							toDate(earliest)
