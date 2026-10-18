@@ -1,0 +1,24 @@
+{
+  "hook": {
+    "enabled": true,
+    "limits": {
+      "maxFindings": 5,
+      "maxChars": 8000
+    }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/routes/+layout.svelte"
+        ],
+        "createdAt": "2026-10-18T03:08:47.095Z",
+        "reason": "User confirmed: wants the colorful gradient title and color splashes back (said they liked the gradients in the previous design)"
+      }
+    ]
+  }
+}
