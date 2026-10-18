@@ -5,6 +5,7 @@
 	import { onNavigate } from '$app/navigation';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
+	import { takeLucky } from '$lib/lucky';
 	import { page } from '$app/stores';
 	let { data, children } = $props();
 
@@ -16,11 +17,18 @@
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const lucky = takeLucky();
 		return new Promise((resolve) => {
-			document.startViewTransition(async () => {
+			const update = async () => {
 				resolve();
 				await navigation.complete;
-			});
+			};
+			// A drawn card gets its own motion (see app.css); older browsers get the plain morph
+			if (lucky && window.ViewTransition && 'types' in ViewTransition.prototype) {
+				document.startViewTransition({ update, types: ['lucky'] });
+			} else {
+				document.startViewTransition(update);
+			}
 		});
 	});
 
