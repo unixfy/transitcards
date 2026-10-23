@@ -2,7 +2,8 @@
 	import '../app.css';
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { beforeNavigate, goto, onNavigate, preloadData } from '$app/navigation';
+	import { beforeNavigate, goto, invalidateAll, onNavigate, preloadData } from '$app/navigation';
+	import { clearCards } from '$lib/cardCache';
 	import PwaStatus from '$lib/PwaStatus.svelte';
 	import { notify } from '$lib/connection.svelte.js';
 	import RouteLine from '$lib/RouteLine.svelte';
@@ -56,9 +57,32 @@
 			.catch(() => notify("You're offline, and that page isn't saved on this device yet."));
 	});
 
+	// An installed app can sit in the background for days, and what it showed offline may be old.
+	// Catch up with the CMS when it comes back after a while, or when the connection returns.
+	const STALE_AFTER_MS = 5 * 60 * 1000;
+	let hiddenAt = 0;
+
+	function refreshContent() {
+		// The slideshow keeps its own deck; reloading it would restart the show
+		if (!navigator.onLine || $page.data.chromeless) return;
+		clearCards();
+		invalidateAll();
+	}
+
+	function onVisibilityChange() {
+		if (document.hidden) hiddenAt = Date.now();
+		else if (hiddenAt && Date.now() - hiddenAt > STALE_AFTER_MS) refreshContent();
+	}
+
 	onMount(() => {
 		dark = document.documentElement.dataset.theme === 'emerald-dark';
 		warmOfflineHome();
+		document.addEventListener('visibilitychange', onVisibilityChange);
+		addEventListener('online', refreshContent);
+		return () => {
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+			removeEventListener('online', refreshContent);
+		};
 	});
 
 	// A full page load gets its data from the server, so the browser never fetches the homepage's

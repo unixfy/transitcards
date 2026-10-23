@@ -67,7 +67,9 @@ self.addEventListener('fetch', (event) => {
 				// A page never visited gets a friendly offline page instead of the browser's own
 				if (event.request.mode === 'navigate') {
 					const offline = await cache.match('/offline.html');
-					if (offline) return offline;
+					// Rewrapped: a host that redirected /offline.html would leave a response
+					// that browsers refuse to use for a navigation
+					if (offline) return new Response(offline.body, { headers: offline.headers });
 				}
 				throw err;
 			}
