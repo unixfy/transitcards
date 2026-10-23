@@ -41,6 +41,9 @@
 		dark = !dark;
 		const theme = dark ? 'emerald-dark' : 'emerald';
 		document.documentElement.dataset.theme = theme;
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', dark ? '#06090c' : '#f1f7f3');
 		try {
 			localStorage.setItem('theme', theme);
 		} catch {
