@@ -14,7 +14,9 @@ self.addEventListener('install', (event) => {
 	event.waitUntil(
 		caches
 			.open(CACHE)
-			.then((cache) => cache.addAll([...ASSETS]))
+			// The start page too, so the installed app opens offline even if it was never reloaded;
+			// a failure there shouldn't stop the worker from installing
+			.then((cache) => Promise.all([cache.addAll([...ASSETS]), cache.add('/').catch(() => {})]))
 			.then(() => self.skipWaiting())
 	);
 });
@@ -36,7 +38,7 @@ self.addEventListener('fetch', (event) => {
 	const url = new URL(event.request.url);
 	if (event.request.method !== 'GET') return;
 	if (url.origin === CMS) {
-		event.respondWith(cms(url));
+		event.respondWith(cms(event, url));
 		return;
 	}
 	// The random-card redirect must stay random
@@ -52,7 +54,7 @@ self.addEventListener('fetch', (event) => {
 			try {
 				const response = await fetch(event.request);
 				if (response.status === 200 && response.type === 'basic') {
-					cache.put(event.request, response.clone());
+					event.waitUntil(cache.put(event.request, response.clone()).catch(() => {}));
 				}
 				return response;
 			} catch (err) {
@@ -66,7 +68,7 @@ self.addEventListener('fetch', (event) => {
 
 // Photos never change at a given URL, so serve them from cache; data goes to the network first.
 // Fetching with CORS even for plain <img> requests keeps one readable copy that the palette canvas can use too.
-async function cms(url) {
+async function cms(event, url) {
 	const cache = await caches.open(CMS_CACHE);
 	const cached = () => cache.match(url.href, { ignoreVary: true });
 	const isPhoto = url.pathname.startsWith('/assets/');
@@ -74,18 +76,26 @@ async function cms(url) {
 		const hit = await cached();
 		if (hit) return hit;
 	}
+	let response;
 	try {
-		const response = await fetch(url.href, { mode: 'cors', credentials: 'omit' });
-		if (response.ok) {
-			await cache.put(url.href, response.clone());
-			trim(cache);
-		}
-		return response;
-	} catch (err) {
+		response = await fetch(url.href, { mode: 'cors', credentials: 'omit' });
+	} catch {
 		const hit = !isPhoto && (await cached());
 		if (hit) return hit;
-		throw err;
+		// Offline, or the CMS left out CORS headers: let the browser make its own request
+		return fetch(event.request);
 	}
+	// The slideshow's large photos would crowd out the ones the grid and card pages need
+	const fromSlideshow = new URL(event.request.referrer || location.href).pathname === '/slideshow';
+	if (response.ok && !fromSlideshow) {
+		event.waitUntil(
+			cache
+				.put(url.href, response.clone())
+				.then(() => trim(cache))
+				.catch(() => {})
+		);
+	}
+	return response;
 }
 
 // Drop the oldest entries once the cache passes its cap

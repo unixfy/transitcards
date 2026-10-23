@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { onNavigate } from '$app/navigation';
+	import { onNavigate, preloadData } from '$app/navigation';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
 	import NavProgress from '$lib/NavProgress.svelte';
@@ -35,7 +35,19 @@
 
 	onMount(() => {
 		dark = document.documentElement.dataset.theme === 'emerald-dark';
+		warmOfflineHome();
 	});
+
+	// A full page load gets its data from the server, so the browser never fetches the homepage's
+	// CMS data itself and the service worker has nothing to fall back on offline. Fetch it once
+	// in the background, after the worker controls the page, so it lands in the worker's cache.
+	async function warmOfflineHome() {
+		const sw = navigator.serviceWorker;
+		if (!sw || !navigator.onLine) return;
+		if (!sw.controller)
+			await new Promise((r) => sw.addEventListener('controllerchange', r, { once: true }));
+		preloadData('/').catch(() => {});
+	}
 
 	function toggleTheme() {
 		dark = !dark;
