@@ -1,13 +1,12 @@
 /// <reference types="@sveltejs/kit" />
 import { build, files, version } from '$service-worker';
+import { CMS_ORIGIN as CMS, CMS_CACHE } from '$lib/cmsCache';
 
 // App shell is precached per deploy; pages and data go network-first so the app still opens offline
 const CACHE = `cache-${version}`;
 const ASSETS = new Set([...build, ...files]);
 
 // Card data and photos from the CMS outlive deploys, so they get their own capped cache
-const CMS = 'https://cms.alexwang.net';
-const CMS_CACHE = 'cms';
 const CMS_LIMIT = 400;
 
 self.addEventListener('install', (event) => {
@@ -64,6 +63,11 @@ self.addEventListener('fetch', (event) => {
 			} catch (err) {
 				const cached = await cache.match(event.request);
 				if (cached) return cached;
+				if (event.request.mode === 'navigate') {
+					// e.g. /?page=3 when only / was saved; the page loads the rest from saved CMS data
+					const samePath = await cache.match(url.pathname);
+					if (samePath) return samePath;
+				}
 				// A page never visited gets a friendly offline page instead of the browser's own
 				if (event.request.mode === 'navigate') {
 					const offline = await cache.match('/offline.html');

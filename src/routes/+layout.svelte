@@ -85,9 +85,9 @@
 		};
 	});
 
-	// A full page load gets its data from the server, so the browser never fetches the homepage's
-	// CMS data itself and the service worker has nothing to fall back on offline. Fetch it once
-	// in the background, after the worker controls the page, so it lands in the worker's cache.
+	// Landing somewhere other than the homepage leaves nothing saved for it, so fetch its CMS data
+	// once in the background, after the worker controls the page, so it lands in the worker's cache.
+	// (On the homepage itself this does nothing; saveServerFetches in hooks.client.js has it covered.)
 	async function warmOfflineHome() {
 		const sw = navigator.serviceWorker;
 		if (!sw || !navigator.onLine) return;
