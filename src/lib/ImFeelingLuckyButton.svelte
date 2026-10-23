@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { goLucky, primeLucky } from '$lib/lucky';
+	import { isNetworkError, notify } from '$lib/connection.svelte.js';
 
 	let busy = $state(false);
 	let onCard = $derived(page.route.id === '/card/[uuid]');
@@ -12,9 +13,11 @@
 		busy = true;
 		try {
 			await goLucky();
-		} catch {
+		} catch (err) {
+			// Offline, the server route can't help either
+			if (isNetworkError(err)) notify("Can't draw a card while offline.");
 			// The server route picks a card the old way if anything above fails
-			window.location.href = '/feeling-lucky';
+			else window.location.href = '/feeling-lucky';
 		} finally {
 			busy = false;
 		}

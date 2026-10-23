@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#06090c" />
+		<title>Offline | Alex's Transit Cards</title>
+		<!-- Served by the service worker when a page that was never saved is opened offline -->
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #f1f7f3;
+				--card: #ffffff;
+				--text: #1c242d;
+				--muted: #4b5563;
+				--brand: #006a36;
+				--on-brand: #ffffff;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--bg: #06090c;
+					--card: #0b0f14;
+					--text: #e8ecf1;
+					--muted: #9aa4b1;
+					--brand: #5fcf8f;
+					--on-brand: #06210f;
+				}
+			}
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: grid;
+				place-items: center;
+				padding: 16px;
+				box-sizing: border-box;
+				background: var(--bg);
+				color: var(--text);
+				font-family: system-ui, sans-serif;
+			}
+			main {
+				max-width: 32rem;
+				padding: 2rem;
+				border-radius: 1rem;
+				background: var(--card);
+				border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+			}
+			h1 {
+				margin: 0 0 0.75rem;
+				font-size: 1.75rem;
+			}
+			p {
+				margin: 0 0 1.5rem;
+				color: var(--muted);
+				line-height: 1.5;
+			}
+			a {
+				display: inline-block;
+				padding: 0.75rem 1.25rem;
+				border-radius: 0.5rem;
+				background: var(--brand);
+				color: var(--on-brand);
+				font-weight: 700;
+				text-decoration: none;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>You're offline</h1>
+			<p>
+				This page isn't saved on this device yet. Cards you've already looked at are still available
+				from the collection.
+			</p>
+			<a href="/">Back to the collection</a>
+		</main>
+		<script>
+			// Load the page that was asked for as soon as the connection is back
+			addEventListener('online', () => location.reload());
+		</script>
+	</body>
+</html>

@@ -2,8 +2,13 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+		<meta name="theme-color" content="#06090c" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Transit Cards" />
 		<script>
 			// Apply the saved (or system) theme before first paint to avoid a flash
 			try {
@@ -12,6 +17,10 @@
 					t = matchMedia('(prefers-color-scheme: dark)').matches ? 'emerald-dark' : 'emerald';
 				}
 				document.documentElement.setAttribute('data-theme', t);
+				// Browser and app title bars match the page ground
+				document
+					.querySelector('meta[name="theme-color"]')
+					.setAttribute('content', t === 'emerald-dark' ? '#06090c' : '#f1f7f3');
 			} catch (e) {}
 		</script>
 		%sveltekit.head%

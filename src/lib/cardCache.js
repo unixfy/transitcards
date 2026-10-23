@@ -10,4 +10,7 @@ export function cacheCards(list) {
 	for (const card of list) cards.set(card.id, card);
 }
 
+// Forget everything, so the next card page asks the CMS again (see the layout's refresh on resume)
+export const clearCards = () => cards.clear();
+
 export const getCachedCard = (id) => (browser ? cards.get(id) : undefined);

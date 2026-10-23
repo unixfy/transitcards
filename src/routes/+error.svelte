@@ -1,6 +1,9 @@
 <script>
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { connection } from '$lib/connection.svelte.js';
 
 	const COPY = {
 		400: {
@@ -19,16 +22,33 @@
 
 	const LINES = ['#1f9d6b', '#2f7fe0', '#f08a24', '#e0457b'];
 
+	const OFFLINE = {
+		title: "You're offline",
+		body: "This page isn't saved on this device yet. It will load as soon as you're back online."
+	};
+
 	let status = $derived($page.status);
+	let offline = $derived(status >= 500 && ($page.error?.offline || !connection.online));
 	let copy = $derived(
-		COPY[status] ??
-			(status >= 500
-				? COPY[500]
-				: {
-						title: 'Something is off the route',
-						body: 'This page could not be shown. Head back to the collection and keep browsing.'
-					})
+		offline
+			? OFFLINE
+			: (COPY[status] ??
+					(status >= 500
+						? COPY[500]
+						: {
+								title: 'Something is off the route',
+								body: 'This page could not be shown. Head back to the collection and keep browsing.'
+							}))
 	);
+
+	const retry = () => goto($page.url, { invalidateAll: true, replaceState: true });
+
+	// Try again by itself once the connection comes back
+	onMount(() => {
+		const onOnline = () => offline && retry();
+		addEventListener('online', onOnline);
+		return () => removeEventListener('online', onOnline);
+	});
 </script>
 
 <svelte:head>
@@ -39,6 +59,7 @@
 	<section class="card card-border bg-base-100 w-full overflow-hidden">
 		<div class="card-body gap-0 p-6 md:p-12">
 			<p
+				class:hidden={offline}
 				class="font-display tnum text-8xl leading-none font-bold tracking-tighter text-(--brand) md:text-9xl"
 				aria-label="Error {status}"
 			>
@@ -66,6 +87,9 @@
 			<p class="text-base-content/80 mt-3 max-w-[60ch] text-lg">{copy.body}</p>
 
 			<div class="mt-8 flex flex-col gap-3 sm:flex-row">
+				{#if offline}
+					<button class="btn btn-lg btn-soft font-display" onclick={retry}>Try again</button>
+				{/if}
 				<a
 					href="/"
 					class="btn btn-lg font-display border-0 text-white shadow-sm hover:brightness-110"

@@ -2,7 +2,18 @@
 	import '../app.css';
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { onNavigate } from '$app/navigation';
+	import {
+		afterNavigate,
+		beforeNavigate,
+		goto,
+		invalidateAll,
+		onNavigate,
+		preloadData
+	} from '$app/navigation';
+	import { clearCards } from '$lib/cardCache';
+	import { adoptPage } from '$lib/cmsCache';
+	import PwaStatus from '$lib/PwaStatus.svelte';
+	import { connection, notify } from '$lib/connection.svelte.js';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
 	import NavProgress from '$lib/NavProgress.svelte';
@@ -33,14 +44,85 @@
 		});
 	});
 
+	// Offline, a page whose data isn't saved would land on the error page. Try it quietly first and
+	// stay put with a note if it can't load.
+	// The one address already checked, so re-navigating to it isn't checked again
+	let approved = null;
+	beforeNavigate((navigation) => {
+		const { to, willUnload, cancel, type, delta } = navigation;
+		if (to && approved === to.url.href) {
+			approved = null;
+			return;
+		}
+		const samePage = to?.url.pathname === location.pathname && to?.url.search === location.search;
+		if (navigator.onLine || willUnload || !to?.route.id || samePage) return;
+		cancel();
+		preloadData(to.url.href)
+			.then((result) => {
+				if (result.type !== 'loaded' || result.status >= 400) throw new Error('not saved');
+				approved = to.url.href;
+				if (type === 'popstate') history.go(delta);
+				else goto(to.url);
+			})
+			.catch(() => notify("You're offline, and that page isn't saved on this device yet."));
+	});
+
+	// An installed app can sit in the background for days, and what it showed offline may be old.
+	// Catch up with the CMS when it comes back after a while, or when the connection returns.
+	const STALE_AFTER_MS = 5 * 60 * 1000;
+	let hiddenAt = 0;
+
+	function refreshContent() {
+		// The slideshow keeps its own deck; reloading it would restart the show
+		if (!navigator.onLine || $page.data.chromeless) return;
+		clearCards();
+		invalidateAll();
+	}
+
+	function onVisibilityChange() {
+		if (document.hidden) hiddenAt = Date.now();
+		else if (hiddenAt && Date.now() - hiddenAt > STALE_AFTER_MS) refreshContent();
+	}
+
 	onMount(() => {
 		dark = document.documentElement.dataset.theme === 'emerald-dark';
+		adoptPage();
+		warmOfflineHome();
+		document.addEventListener('visibilitychange', onVisibilityChange);
+		addEventListener('online', refreshContent);
+		return () => {
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+			removeEventListener('online', refreshContent);
+		};
+	});
+
+	// Landing somewhere other than the homepage leaves nothing saved for it, so fetch its CMS data
+	// once in the background, after the worker controls the page, so it lands in the worker's cache.
+	// (On the homepage itself this does nothing; saveServerFetches in hooks.client.js has it covered.)
+	async function warmOfflineHome() {
+		const sw = navigator.serviceWorker;
+		if (!sw || !navigator.onLine) return;
+		if (!sw.controller)
+			await new Promise((r) => sw.addEventListener('controllerchange', r, { once: true }));
+		preloadData('/').catch(() => {});
+	}
+
+	// A page reached by tapping around was rendered in the browser, so the worker never saw its
+	// HTML and reloading it offline would fail. Fetch it once in the background so it's saved.
+	afterNavigate(({ type, to }) => {
+		if (type === 'enter' || !to || !navigator.onLine || !navigator.serviceWorker?.controller)
+			return;
+		const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1000));
+		idle(() => fetch(to.url.href, { headers: { accept: 'text/html' } }).catch(() => {}));
 	});
 
 	function toggleTheme() {
 		dark = !dark;
 		const theme = dark ? 'emerald-dark' : 'emerald';
 		document.documentElement.dataset.theme = theme;
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', dark ? '#06090c' : '#f1f7f3');
 		try {
 			localStorage.setItem('theme', theme);
 		} catch {
@@ -63,6 +145,8 @@
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
+<PwaStatus />
+
 {#if $page.data.chromeless}
 	<!-- Full-screen routes (e.g. the slideshow) render without the site chrome -->
 	{@render children()}
@@ -84,6 +168,13 @@
 						</a>
 						<div class="text-base-content/80 tnum mt-1 text-sm md:mt-2 md:text-xl">
 							<span class="text-base-content">{data.totalAllCards}</span> total cards
+							{#if !connection.online}
+								<span
+									class="badge badge-soft badge-warning ml-1 align-middle"
+									title="You're offline. Cards you've already seen are still here."
+									data-offline-badge>Offline</span
+								>
+							{/if}
 						</div>
 					</div>
 					<div class="flex items-center gap-1">

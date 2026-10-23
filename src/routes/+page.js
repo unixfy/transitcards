@@ -2,6 +2,9 @@ import getDirectusInstance from '$lib/directus';
 import { readItems } from '@directus/sdk';
 import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
 
+// A hand-typed ?page=999 shouldn't turn into 999 requests
+const MAX_PAGES = 20;
+
 export async function load({ fetch, url }) {
 	const directus = getDirectusInstance(fetch);
 	const limit = CARDS_PER_PAGE; // Results per page
@@ -18,8 +21,12 @@ export async function load({ fetch, url }) {
 	const filter = buildCardsFilter(agencyFilter, searchQuery);
 
 	// Fetch every page up to and including the current one, so landing on ?page=N shows
-	// the earlier pages above it, as if the user had scrolled down to it
-	const transitCardsPromise = fetchCardsPages(directus, 1, filter, currentPage);
+	// the earlier pages above it, as if the user had scrolled down to it. One request per page,
+	// the same ones infinite scroll makes, so pages saved while scrolling also load offline.
+	const pageCount = Math.min(currentPage, MAX_PAGES);
+	const transitCardsPromise = Promise.all(
+		Array.from({ length: pageCount }, (_, i) => fetchCardsPages(directus, i + 1, filter))
+	).then((pages) => pages.flat());
 
 	// Fetch total count of transit cards with filters applied
 	const totalResultCardsCountPromise = directus.request(
