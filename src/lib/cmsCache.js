@@ -29,3 +29,24 @@ export function saveServerFetches() {
 		})
 		.catch(() => {});
 }
+
+// A page loaded before the worker took over (a first visit, or a hard refresh, which skips it)
+// fetched its data and photos behind the worker's back. Ask the worker to take over, then request
+// the photos once more through it so they're saved too; most come straight from the HTTP cache.
+export async function adoptPage() {
+	const sw = navigator.serviceWorker;
+	if (!sw || sw.controller) return;
+	const reg = await sw.ready;
+	if (!sw.controller) {
+		const controlled = new Promise((r) =>
+			sw.addEventListener('controllerchange', r, { once: true })
+		);
+		reg.active?.postMessage('CLAIM');
+		await controlled;
+	}
+	const photos = performance
+		.getEntriesByType('resource')
+		.map((entry) => entry.name)
+		.filter((url) => url.startsWith(CMS_ORIGIN + '/assets/'));
+	for (const url of new Set(photos)) await fetch(url).catch(() => {});
+}

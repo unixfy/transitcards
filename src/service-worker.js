@@ -19,9 +19,11 @@ self.addEventListener('install', (event) => {
 	);
 });
 
-// A new version waits until the page's update prompt says to take over (see PwaStatus.svelte)
 self.addEventListener('message', (event) => {
+	// A new version waits until the page's update prompt says to take over (see PwaStatus.svelte)
 	if (event.data === 'SKIP_WAITING') self.skipWaiting();
+	// A hard refresh opens the page without the worker; take it back so offline still works
+	if (event.data === 'CLAIM') event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('activate', (event) => {
@@ -95,7 +97,10 @@ async function cms(event, url) {
 	try {
 		response = await fetch(url.href, { mode: 'cors', credentials: 'omit' });
 	} catch {
-		const hit = !isPhoto && (await cached());
+		// Offline, any saved size of a photo beats a broken image
+		const hit = isPhoto
+			? await cache.match(url.href, { ignoreSearch: true, ignoreVary: true })
+			: await cached();
 		if (hit) return hit;
 		// Offline, or the CMS left out CORS headers: let the browser make its own request
 		return fetch(event.request);

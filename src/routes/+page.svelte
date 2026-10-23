@@ -94,9 +94,9 @@
 			maybeLoadMore();
 		} catch (err) {
 			if (gen !== generation) return;
-			console.error('Failed to load more cards', err);
 			loadingMore = false;
 			loadError = isNetworkError(err) ? 'offline' : true;
+			if (loadError === true) console.error('Failed to load more cards', err);
 		}
 	}
 

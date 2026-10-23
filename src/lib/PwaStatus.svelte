@@ -39,9 +39,10 @@
 	}
 </script>
 
-<div class="toast toast-center toast-bottom z-50" role="status">
+<!-- Taps pass through around the notes, so they never block the buttons beneath -->
+<div class="toast toast-center toast-bottom pointer-events-none z-50" role="status">
 	{#if waiting}
-		<div class="alert bg-base-100 shadow-lg">
+		<div class="alert bg-base-100 pointer-events-auto shadow-lg">
 			<span>A new version is ready.</span>
 			<button class="btn btn-sm btn-ghost" onclick={() => (waiting = null)}>Later</button>
 			<button
@@ -53,7 +54,5 @@
 	{/if}
 	{#if connection.note}
 		<div class="alert bg-base-100 shadow-lg">{connection.note}</div>
-	{:else if !connection.online}
-		<div class="alert bg-base-100 shadow-lg">You're offline. Showing saved cards.</div>
 	{/if}
 </div>

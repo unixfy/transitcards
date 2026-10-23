@@ -2,10 +2,18 @@
 	import '../app.css';
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { beforeNavigate, goto, invalidateAll, onNavigate, preloadData } from '$app/navigation';
+	import {
+		afterNavigate,
+		beforeNavigate,
+		goto,
+		invalidateAll,
+		onNavigate,
+		preloadData
+	} from '$app/navigation';
 	import { clearCards } from '$lib/cardCache';
+	import { adoptPage } from '$lib/cmsCache';
 	import PwaStatus from '$lib/PwaStatus.svelte';
-	import { notify } from '$lib/connection.svelte.js';
+	import { connection, notify } from '$lib/connection.svelte.js';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
 	import NavProgress from '$lib/NavProgress.svelte';
@@ -38,19 +46,21 @@
 
 	// Offline, a page whose data isn't saved would land on the error page. Try it quietly first and
 	// stay put with a note if it can't load.
-	let offlineCheckDone = false;
+	// The one address already checked, so re-navigating to it isn't checked again
+	let approved = null;
 	beforeNavigate((navigation) => {
 		const { to, willUnload, cancel, type, delta } = navigation;
-		const samePage = to?.url.pathname === location.pathname && to?.url.search === location.search;
-		if (offlineCheckDone || navigator.onLine || willUnload || !to?.route.id || samePage) {
-			offlineCheckDone = false;
+		if (to && approved === to.url.href) {
+			approved = null;
 			return;
 		}
+		const samePage = to?.url.pathname === location.pathname && to?.url.search === location.search;
+		if (navigator.onLine || willUnload || !to?.route.id || samePage) return;
 		cancel();
 		preloadData(to.url.href)
 			.then((result) => {
 				if (result.type !== 'loaded' || result.status >= 400) throw new Error('not saved');
-				offlineCheckDone = true;
+				approved = to.url.href;
 				if (type === 'popstate') history.go(delta);
 				else goto(to.url);
 			})
@@ -76,6 +86,7 @@
 
 	onMount(() => {
 		dark = document.documentElement.dataset.theme === 'emerald-dark';
+		adoptPage();
 		warmOfflineHome();
 		document.addEventListener('visibilitychange', onVisibilityChange);
 		addEventListener('online', refreshContent);
@@ -95,6 +106,15 @@
 			await new Promise((r) => sw.addEventListener('controllerchange', r, { once: true }));
 		preloadData('/').catch(() => {});
 	}
+
+	// A page reached by tapping around was rendered in the browser, so the worker never saw its
+	// HTML and reloading it offline would fail. Fetch it once in the background so it's saved.
+	afterNavigate(({ type, to }) => {
+		if (type === 'enter' || !to || !navigator.onLine || !navigator.serviceWorker?.controller)
+			return;
+		const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1000));
+		idle(() => fetch(to.url.href, { headers: { accept: 'text/html' } }).catch(() => {}));
+	});
 
 	function toggleTheme() {
 		dark = !dark;
@@ -148,6 +168,13 @@
 						</a>
 						<div class="text-base-content/80 tnum mt-1 text-sm md:mt-2 md:text-xl">
 							<span class="text-base-content">{data.totalAllCards}</span> total cards
+							{#if !connection.online}
+								<span
+									class="badge badge-soft badge-warning ml-1 align-middle"
+									title="You're offline. Cards you've already seen are still here."
+									data-offline-badge>Offline</span
+								>
+							{/if}
 						</div>
 					</div>
 					<div class="flex items-center gap-1">
