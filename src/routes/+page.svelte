@@ -10,6 +10,7 @@
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import { cacheCards } from '$lib/cardCache';
 	import AcquisitionChart from '$lib/AcquisitionChart.svelte';
+	import { isNetworkError } from '$lib/connection.svelte.js';
 	import { getPalette, setWash, getHeroId, setHeroId, clearHeroNames } from '$lib/palette';
 
 	let searchInput = data.searchQuery || '';
@@ -25,7 +26,7 @@
 	let filterKey = '';
 	let urlPage = null; // page number currently shown in the address bar
 	let loadingMore = false;
-	let loadError = false;
+	let loadError = false; // or 'offline'
 	let sentinel;
 
 	// Start over whenever load() returns new data (a fresh navigation or a filter change)
@@ -95,7 +96,7 @@
 			if (gen !== generation) return;
 			console.error('Failed to load more cards', err);
 			loadingMore = false;
-			loadError = true;
+			loadError = isNetworkError(err) ? 'offline' : true;
 		}
 	}
 
@@ -198,10 +199,18 @@
 				maybeLoadMore();
 			});
 		};
+		// Pick up where infinite scroll stopped once the connection is back
+		const onOnline = () => {
+			if (loadError !== 'offline') return;
+			loadError = false;
+			loadMore();
+		};
 		addEventListener('scroll', onScroll, { passive: true });
 		addEventListener('resize', onScroll);
+		addEventListener('online', onOnline);
 		onScroll();
 		return () => {
+			removeEventListener('online', onOnline);
 			washObserver?.disconnect();
 			clearTimeout(washTimer);
 			removeEventListener('scroll', onScroll);
@@ -448,6 +457,8 @@
 				{#if loadingMore}
 					<span class="loading loading-spinner"></span>
 					Loading…
+				{:else if loadError === 'offline'}
+					You're offline. More cards will load when you reconnect
 				{:else if loadError}
 					Couldn't load more cards. Retry
 				{:else}

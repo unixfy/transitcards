@@ -17,8 +17,12 @@ self.addEventListener('install', (event) => {
 			// The start page too, so the installed app opens offline even if it was never reloaded;
 			// a failure there shouldn't stop the worker from installing
 			.then((cache) => Promise.all([cache.addAll([...ASSETS]), cache.add('/').catch(() => {})]))
-			.then(() => self.skipWaiting())
 	);
+});
+
+// A new version waits until the page's update prompt says to take over (see PwaStatus.svelte)
+self.addEventListener('message', (event) => {
+	if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -60,6 +64,11 @@ self.addEventListener('fetch', (event) => {
 			} catch (err) {
 				const cached = await cache.match(event.request);
 				if (cached) return cached;
+				// A page never visited gets a friendly offline page instead of the browser's own
+				if (event.request.mode === 'navigate') {
+					const offline = await cache.match('/offline.html');
+					if (offline) return offline;
+				}
 				throw err;
 			}
 		})()

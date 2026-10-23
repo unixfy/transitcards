@@ -2,7 +2,9 @@
 	import '../app.css';
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { onNavigate, preloadData } from '$app/navigation';
+	import { beforeNavigate, goto, onNavigate, preloadData } from '$app/navigation';
+	import PwaStatus from '$lib/PwaStatus.svelte';
+	import { notify } from '$lib/connection.svelte.js';
 	import RouteLine from '$lib/RouteLine.svelte';
 	import Wash from '$lib/Wash.svelte';
 	import NavProgress from '$lib/NavProgress.svelte';
@@ -31,6 +33,27 @@
 				document.startViewTransition(update);
 			}
 		});
+	});
+
+	// Offline, a page whose data isn't saved would land on the error page. Try it quietly first and
+	// stay put with a note if it can't load.
+	let offlineCheckDone = false;
+	beforeNavigate((navigation) => {
+		const { to, willUnload, cancel, type, delta } = navigation;
+		const samePage = to?.url.pathname === location.pathname && to?.url.search === location.search;
+		if (offlineCheckDone || navigator.onLine || willUnload || !to?.route.id || samePage) {
+			offlineCheckDone = false;
+			return;
+		}
+		cancel();
+		preloadData(to.url.href)
+			.then((result) => {
+				if (result.type !== 'loaded' || result.status >= 400) throw new Error('not saved');
+				offlineCheckDone = true;
+				if (type === 'popstate') history.go(delta);
+				else goto(to.url);
+			})
+			.catch(() => notify("You're offline, and that page isn't saved on this device yet."));
 	});
 
 	onMount(() => {
@@ -77,6 +100,8 @@
 	{/if}
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
+
+<PwaStatus />
 
 {#if $page.data.chromeless}
 	<!-- Full-screen routes (e.g. the slideshow) render without the site chrome -->
