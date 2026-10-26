@@ -3,7 +3,8 @@
 	import { crossfade } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { onMount, tick } from 'svelte';
-	import { afterNavigate, goto, replaceState } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto, replaceState } from '$app/navigation';
+	import { rememberCollection, takeReturnScroll } from '$lib/collectionReturn';
 	import { navigating, page } from '$app/state';
 	import getDirectusInstance from '$lib/directus';
 	import { buildCardsFilter, fetchCardsPages, CARDS_PER_PAGE } from '$lib/cards';
@@ -14,6 +15,7 @@
 	import { getPalette, setWash, getHeroId, setHeroId, clearHeroNames } from '$lib/palette';
 
 	let searchInput = data.searchQuery || '';
+
 	let isSearching = false;
 
 	// Start loading the next page when the sentinel is this close to the bottom of the viewport
@@ -222,9 +224,18 @@
 	// Landing on ?page=N (a link, a typed URL or a fresh tab) starts the view at page N, with the
 	// earlier pages above it. Back/forward is left to the snapshot below, which runs afterwards.
 	afterNavigate(({ type }) => {
-		if (type === 'popstate' || data.currentPage <= 1) return;
+		if (type === 'popstate') return;
+		// Coming back from a card opened in its own tab: return to the exact spot it was opened from
+		const returnY = takeReturnScroll(location.search);
+		if (returnY !== null) return window.scrollTo(0, returnY);
+		if (data.currentPage <= 1) return;
 		const pageStart = document.querySelector(`[data-page-start="${data.currentPage}"]`);
 		if (pageStart) window.scrollTo(0, pageStart.getBoundingClientRect().top + window.scrollY - 16);
+	});
+
+	// Remember this spot for the card page's "Return to Collection"
+	beforeNavigate(({ to }) => {
+		if (to?.route.id === '/card/[uuid]') rememberCollection();
 	});
 
 	// When returning via the back button (or reloading), bring back every loaded page and the
@@ -414,6 +425,7 @@
 						<figure class="skeleton relative">
 							<img
 								src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+								crossorigin="anonymous"
 								alt={card.name}
 								class="aspect-[3.375/2.125] w-full rounded-none object-cover"
 								use:loaded

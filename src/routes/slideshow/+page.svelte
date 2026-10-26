@@ -18,6 +18,12 @@
 	let showHint = $state(true);
 	let now = $state(null);
 
+	// The 3D card stream takes over the card itself when WebGL is available and motion is welcome
+	let canvas = $state();
+	let cardSlot = $state();
+	let info = $state();
+	let cloud = $state.raw(null);
+
 	let current = $derived(deck[index]);
 	let upcoming = $derived(deck.length > 1 ? deck[(index + 1) % deck.length] : null);
 
@@ -68,11 +74,65 @@
 		showHint = false;
 	}
 
+	$effect(() => {
+		if (cloud && current) cloud.feature(current);
+	});
+
+	// Where the featured card should land: the flat card's spot, which keeps its layout while hidden
+	function cardTarget() {
+		const figure = cardSlot?.querySelector('.card');
+		if (!figure) return null;
+		const slot = cardSlot.getBoundingClientRect();
+		const frame = canvas.getBoundingClientRect();
+		return {
+			x: slot.left - frame.left + slot.width / 2,
+			y: slot.top - frame.top + slot.height / 2,
+			width: figure.offsetWidth
+		};
+	}
+
+	// The details column, relative to the canvas, so the stream can dim behind it
+	function textBox() {
+		if (!info) return null;
+		const box = info.getBoundingClientRect();
+		const frame = canvas.getBoundingClientRect();
+		return {
+			left: box.left - frame.left,
+			right: box.right - frame.left,
+			top: box.top - frame.top,
+			bottom: box.bottom - frame.top
+		};
+	}
+
+	async function startCloud() {
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const { hasWebGL } = await import('$lib/three/cardGeometry');
+		if (!hasWebGL()) return;
+		try {
+			const { createCardCloud } = await import('$lib/three/cardCloud');
+			if (!canvas) return;
+			const instance = createCardCloud(canvas, data.transit_cards, {
+				getTarget: cardTarget,
+				getQuiet: textBox,
+				isPaused: () => paused
+			});
+			instance.loadAll(deck);
+			cloud = instance;
+		} catch (err) {
+			console.error('3D slideshow unavailable; showing the flat one', err);
+		}
+	}
+
 	// Warm the cache for the next card so it is ready when it slides in
 	$effect(() => {
 		if (!upcoming) return;
-		new Image().src = assetUrl(upcoming.image, 1600);
-		new Image().src = assetUrl(upcoming.image, 64);
+		if (cloud) return void cloud.preload(upcoming);
+		// Requested with CORS like every photo on the site, so each size is cached once
+		for (const width of [1600, 64]) {
+			const img = new Image();
+			img.crossOrigin = 'anonymous';
+			img.src = assetUrl(upcoming.image, width);
+		}
 	});
 
 	const clockTime = $derived(
@@ -110,6 +170,8 @@
 		requestWakeLock();
 		document.addEventListener('visibilitychange', requestWakeLock);
 
+		startCloud();
+
 		return () => {
 			clearInterval(clock);
 			clearTimeout(hint);
@@ -117,6 +179,7 @@
 			if (originalViewport) viewport.setAttribute('content', originalViewport);
 			document.removeEventListener('visibilitychange', requestWakeLock);
 			wakeLock?.release().catch(() => {});
+			cloud?.destroy();
 		};
 	});
 
@@ -154,13 +217,14 @@
 <svelte:window onkeydown={handleKey} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="frame" class:paused onclick={handleTap}>
+<div class="frame" class:paused class:immersive={cloud} onclick={handleTap}>
 	<!-- Ambient backdrop: a tiny copy of the current card, blurred into a wash of color -->
 	<div class="ambient" aria-hidden="true">
 		{#if current}
 			{#key current.id}
 				<img
 					src={assetUrl(current.image, 64)}
+					crossorigin="anonymous"
 					alt=""
 					in:fade={{ duration: 2400 }}
 					out:fade={{ duration: 2400 }}
@@ -169,15 +233,24 @@
 		{/if}
 	</div>
 	<div class="vignette" aria-hidden="true"></div>
+	<canvas class="cloud" bind:this={canvas} aria-hidden="true"></canvas>
 
 	{#if current}
 		<main class="stage">
 			<!-- Card -->
-			<div class="card-slot">
+			<div class="card-slot" bind:this={cardSlot}>
 				{#key current.id}
 					<figure class="card" in:cardIn out:cardOut>
 						<div class="tilt">
-							<img src={assetUrl(current.image, 1600)} alt={current.name} draggable="false" />
+							<!-- The 3D card draws this photo itself; the flat one only keeps its place -->
+							{#if !cloud}
+								<img
+									src={assetUrl(current.image, 1600)}
+									alt={current.name}
+									crossorigin="anonymous"
+									draggable="false"
+								/>
+							{/if}
 							<div class="sheen" aria-hidden="true"></div>
 						</div>
 					</figure>
@@ -185,7 +258,7 @@
 			</div>
 
 			<!-- Details -->
-			<aside class="info">
+			<aside class="info" bind:this={info}>
 				<div class="clock">
 					{#if now}
 						<span class="time">{clockTime}</span>
@@ -295,6 +368,19 @@
 		to {
 			transform: scale(1.12) translate3d(2%, -2%, 0);
 		}
+	}
+
+	.cloud {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+	}
+
+	/* The 3D card stands in for the flat one, which keeps its place in the layout as the target */
+	.immersive .card {
+		visibility: hidden;
 	}
 
 	/* ---------- Layout ---------- */
