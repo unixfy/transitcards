@@ -179,6 +179,28 @@
 					</div>
 					<div class="flex items-center gap-1">
 						<a
+							href="/binder"
+							class="btn btn-ghost btn-lg md:btn-md max-md:btn-square"
+							title="Leaf through the binder the cards live in"
+							aria-label="Binder"
+						>
+							<!-- A ring binder, seen from the front -->
+							<svg
+								viewBox="0 0 24 24"
+								class="h-5 w-5"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+								><rect x="5" y="3" width="15" height="18" rx="2" /><path
+									d="M3 7h4M3 12h4M3 17h4M11 8h5"
+								/></svg
+							>
+							<span class="max-md:hidden">Binder</span>
+						</a>
+						<a
 							href="/slideshow"
 							class="btn btn-ghost btn-lg md:btn-md max-md:btn-square"
 							title="Watch the collection as a full-screen slideshow"

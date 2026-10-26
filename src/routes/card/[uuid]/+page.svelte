@@ -1,5 +1,5 @@
 <script>
-	import { goto } from '$app/navigation';
+	import { returnToCollection } from '$lib/collectionReturn';
 	import { onMount } from 'svelte';
 	import ImFeelingLuckyButton from '$lib/ImFeelingLuckyButton.svelte';
 	import { getPalette, peekPalette, setWash, setHeroId, NEUTRAL } from '$lib/palette';
@@ -28,15 +28,6 @@
 	});
 
 	const MAX_TILT = 14; // degrees
-
-	// Function to handle navigation
-	function handleNavigation() {
-		if (window.history.length > 2) {
-			history.back();
-		} else {
-			goto('/');
-		}
-	}
 
 	// Tilt the card toward a point (0..1 across the card).
 	// Writes are batched into one frame, and only transforms change, so it stays on the compositor.
@@ -132,7 +123,15 @@
 					style:view-transition-name="card-hero"
 					class="tilt motion-fancy relative aspect-[3.375/2.125] w-full rounded-[3.5%/5.5%] shadow-[0_28px_36px_-18px_rgb(0_0_0/0.5)] [transform-style:preserve-3d]"
 				>
-					<!-- The small photo is already cached from the grid; it shows at once while the sharp one loads -->
+					<!-- The small photo is already cached from the grid, binder or slideshow; it shows at once
+					     while the sharp one loads (requested with CORS like theirs, so it's the same cached copy) -->
+					<img
+						src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=400"
+						alt=""
+						aria-hidden="true"
+						crossorigin="anonymous"
+						class="absolute inset-0 h-full w-full rounded-[3.5%/5.5%] object-cover"
+					/>
 					<img
 						src="https://cms.alexwang.net/assets/{card.image}?format=webp&width=1200"
 						srcset="
@@ -142,8 +141,7 @@
 						"
 						sizes="(min-width: 1024px) 640px, 100vw"
 						alt={card.name}
-						class="h-full w-full rounded-[3.5%/5.5%] object-cover"
-						style="background: url(https://cms.alexwang.net/assets/{card.image}?format=webp&width=400) center / cover;"
+						class="relative h-full w-full rounded-[3.5%/5.5%] object-cover"
 					/>
 				</div>
 			</div>
@@ -190,7 +188,7 @@
 			{/if}
 
 			<div class="pt-8">
-				<button onclick={handleNavigation} class="btn btn-soft btn-block btn-lg">
+				<button onclick={returnToCollection} class="btn btn-soft btn-block btn-lg">
 					« Return to Collection
 				</button>
 			</div>
